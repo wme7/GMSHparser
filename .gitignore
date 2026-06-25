@@ -35,6 +35,9 @@
 *.npz
 *.npy
 
+# MacOS
+.DS_Store
+
 # Matlab automated saving files
 *.asv
 

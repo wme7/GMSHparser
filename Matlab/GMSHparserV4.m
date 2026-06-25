@@ -11,8 +11,8 @@ function [V,VE,SE,LE,PE,mapPhysNames,info] = GMSHparserV4(filename)
 %
 % Output:
 %     V: the vertices (nodes coordinates) -- (Nx3) array
-%    VE: volumetric elements (tetrahedrons) -- structure
-%    SE: surface elements (triangles,quads) -- structure
+%    VE: volumetric elements -- structure with fields .tet, .hex and .prism
+%    SE: surface elements -- structure with fields .tri and .quad
 %    LE: curvilinear elements (lines/edges) -- structure
 %    PE: point elements (singular vertices) -- structure
 %    mapPhysNames: maps phys.tag --> phys.name  -- map structure
@@ -32,18 +32,18 @@ function [V,VE,SE,LE,PE,mapPhysNames,info] = GMSHparserV4(filename)
 %                                                       |      `\
 % Tetrahedron:                                          |        `\
 %                                                       0----------1 --> u
-%                    v
-%                   ,
-%                  /
-%               2
-%             ,/|`\                    Based on the GMSH guide 4.9.4
-%           ,/  |  `\                  This are lower-order elements 
-%         ,/    '.   `\                identified as:
-%       ,/       |     `\                  E-1 : 2-node Line 
-%     ,/         |       `\                E-2 : 3-node Triangle
-%    0-----------'.--------1 --> u         E-4 : 4-node tetrahedron
-%     `\.         |      ,/                E-15: 1-node point
-%        `\.      |    ,/
+%                   v
+%                  ,
+%                 /                    Based on the GMSH guide 4.9.4
+%               2                      This are lower-order elements 
+%             ,/|`\                    identified as:
+%           ,/  |  `\                      E-1 : 2-node Line 
+%         ,/    '.   `\                    E-2 : 3-node Triangle
+%       ,/       |     `\                  E-3 : 4-node quadrilateral
+%     ,/         |       `\                E-4 : 4-node tetrahedron
+%    0-----------'.--------1 --> u         E-5 : 8-node hexahedron
+%     `\.         |      ,/                E-6 : 6-node prism (wedge)
+%        `\.      |    ,/                  E-15: 1-node point
 %           `\.   '. ,/                Other elements can be added to 
 %              `\. |/                  this parser by modifying the 
 %                 `3                   Read Elements stage.
@@ -249,15 +249,19 @@ numElements     = line_data(2);
 %maxElementsTag  = line_data(4); % not needed
 
 % Allocate space for Elements data
-PE = struct('EToV',{[]},'phys_tag',{[]},'geom_tag',{[]},'Etype',{[]});
-LE = struct('EToV',{[]},'phys_tag',{[]},'geom_tag',{[]},'Etype',{[]});
-SE = struct('EToV',{[]},'phys_tag',{[]},'geom_tag',{[]},'Etype',{[]});
-VE = struct('EToV',{[]},'phys_tag',{[]},'geom_tag',{[]},'Etype',{[]});
+elem = struct('EToV',[],'phys_tag',[],'geom_tag',[],'part_tag',[],'Etype',[]);
+PE = elem;
+LE = elem;
+SE = struct('tri',elem,'quad',elem);
+VE = struct('tet',elem,'hex',elem,'prism',elem);
 
 % Element counters
 numE1 = 0; % Lines Element counter
 numE2 = 0; % Triangle Element counter
+numE3 = 0; % Quadrilateral Element counter
 numE4 = 0; % Tetrahedron Element counter
+numE5 = 0; % Hexahedron Element counter
+numE6 = 0; % Prism Element counter
 numE15= 0; % point Element counter
 
 % Read elements blocks
@@ -266,7 +270,7 @@ for ent = 1:numEntityBlocks
     line_data = sscanf(cells_E{l},'%d %d %d %d');
     %entityDim = line_data(1); % 0:point, 1:curve, 2:surface, 3:volume
     entityTag = line_data(2); % this is: Entity.ID | Entity.child_ID
-    elementType = line_data(3); % 1:line, 2:triangle, 4:tetrahedron, 15:point
+    elementType = line_data(3); % 1:line, 2:tri, 3:quad, 4:tet, 5:hex, 6:prism, 15:point
     numElementsInBlock = line_data(4);
     
     % Read Elements in block
@@ -288,25 +292,58 @@ for ent = 1:numEntityBlocks
                 end
             case 2 % triangle elements
                 numE2 = numE2 + 1; % update element counter
-                SE.Etype(numE2,1) = elementType;
-                SE.EToV(numE2,:) = line_data(2:4);
-                SE.phys_tag(numE2,1) = surf2Phys(entityTag);
+                SE.tri.Etype(numE2,1) = elementType;
+                SE.tri.EToV(numE2,:) = line_data(2:4);
+                SE.tri.phys_tag(numE2,1) = surf2Phys(entityTag);
                 if not(single_domain)
-                    SE.geom_tag(numE2,1) = surf2Geom(entityTag);
-                    SE.part_tag(numE2,1) = surf2Part(entityTag);
+                    SE.tri.geom_tag(numE2,1) = surf2Geom(entityTag);
+                    SE.tri.part_tag(numE2,1) = surf2Part(entityTag);
                 else
-                    SE.geom_tag(numE2,1) = entityTag;
+                    SE.tri.geom_tag(numE2,1) = entityTag;
+                end
+            case 3 % quadrilateral elements
+                numE3 = numE3 + 1; % update element counter
+                SE.quad.Etype(numE3,1) = elementType;
+                SE.quad.EToV(numE3,:) = line_data(2:5);
+                SE.quad.phys_tag(numE3,1) = surf2Phys(entityTag);
+                if not(single_domain)
+                    SE.quad.geom_tag(numE3,1) = surf2Geom(entityTag);
+                    SE.quad.part_tag(numE3,1) = surf2Part(entityTag);
+                else
+                    SE.quad.geom_tag(numE3,1) = entityTag;
                 end
             case 4 % tetrahedron elements
                 numE4 = numE4 + 1; % update element counter
-                VE.Etype(numE4,1) = elementType;
-                VE.EToV(numE4,:) = line_data(2:5);
-                VE.phys_tag(numE4,1) = volm2Phys(entityTag);
+                VE.tet.Etype(numE4,1) = elementType;
+                VE.tet.EToV(numE4,:) = line_data(2:5);
+                VE.tet.phys_tag(numE4,1) = volm2Phys(entityTag);
                 if not(single_domain)
-                    VE.geom_tag(numE4,1) = volm2Geom(entityTag);
-                    VE.part_tag(numE4,1) = volm2Part(entityTag);
+                    VE.tet.geom_tag(numE4,1) = volm2Geom(entityTag);
+                    VE.tet.part_tag(numE4,1) = volm2Part(entityTag);
                 else 
-                    VE.geom_tag(numE4,1) = entityTag;
+                    VE.tet.geom_tag(numE4,1) = entityTag;
+                end
+            case 5 % hexahedron elements
+                numE5 = numE5 + 1; % update element counter
+                VE.hex.Etype(numE5,1) = elementType;
+                VE.hex.EToV(numE5,:) = line_data(2:9);
+                VE.hex.phys_tag(numE5,1) = volm2Phys(entityTag);
+                if not(single_domain)
+                    VE.hex.geom_tag(numE5,1) = volm2Geom(entityTag);
+                    VE.hex.part_tag(numE5,1) = volm2Part(entityTag);
+                else
+                    VE.hex.geom_tag(numE5,1) = entityTag;
+                end
+            case 6 % prism (wedge) elements
+                numE6 = numE6 + 1; % update element counter
+                VE.prism.Etype(numE6,1) = elementType;
+                VE.prism.EToV(numE6,:) = line_data(2:7);
+                VE.prism.phys_tag(numE6,1) = volm2Phys(entityTag);
+                if not(single_domain)
+                    VE.prism.geom_tag(numE6,1) = volm2Geom(entityTag);
+                    VE.prism.part_tag(numE6,1) = volm2Part(entityTag);
+                else
+                    VE.prism.geom_tag(numE6,1) = entityTag;
                 end
             case 15 % Point elements
                 numE15 = numE15 + 1; % update element counter
@@ -326,10 +363,13 @@ end
 %
 fprintf('Total point-elements found = %d\n',numE15);
 fprintf('Total line-elements found = %d\n',numE1);
-fprintf('Total surface-elements found = %d\n',numE2);
-fprintf('Total volume-elements found = %d\n',numE4);
+fprintf('Total triangle-elements found = %d\n',numE2);
+fprintf('Total quadrilateral-elements found = %d\n',numE3);
+fprintf('Total tetrahedron-elements found = %d\n',numE4);
+fprintf('Total hexahedron-elements found = %d\n',numE5);
+fprintf('Total prism-elements found = %d\n',numE6);
 % Sanity check
-if numElements ~= (numE15+numE1+numE2+numE4)
+if numElements ~= (numE15+numE1+numE2+numE3+numE4+numE5+numE6)
     error('Total number of elements missmatch!'); 
 end
 %

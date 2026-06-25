@@ -11,8 +11,8 @@ function [V,VE,SE,LE,PE,mapPhysNames,info] = GMSHparserV2(filename)
 %
 % Output:
 %     V: the vertices (nodes coordinates) -- (Nx3) array
-%    VE: volumetric elements (tetrahedrons) -- structure
-%    SE: surface elements (triangles,quads) -- structure
+%    VE: volumetric elements -- structure with fields .tet, .hex and .prism
+%    SE: surface elements -- structure with fields .tri and .quad
 %    LE: curvilinear elements (lines/edges) -- structure
 %    PE: point elements (singular vertices) -- structure
 %    mapPhysNames: maps phys.tag --> phys.name  -- map structure
@@ -32,18 +32,18 @@ function [V,VE,SE,LE,PE,mapPhysNames,info] = GMSHparserV2(filename)
 %                                                       |      `\
 % Tetrahedron:                                          |        `\
 %                                                       0----------1 --> u
-%                    v
-%                   ,
-%                  /
-%               2
-%             ,/|`\                    Based on the GMSH guide 4.9.4
-%           ,/  |  `\                  This are lower-order elements 
-%         ,/    '.   `\                identified as:
-%       ,/       |     `\                  E-1 : 2-node Line 
-%     ,/         |       `\                E-2 : 3-node Triangle
-%    0-----------'.--------1 --> u         E-4 : 4-node tetrahedron
-%     `\.         |      ,/                E-15: 1-node point
-%        `\.      |    ,/
+%                   v
+%                  ,
+%                 /                    Based on the GMSH guide 4.9.4
+%               2                      This are lower-order elements 
+%             ,/|`\                    identified as:
+%           ,/  |  `\                      E-1 : 2-node Line 
+%         ,/    '.   `\                    E-2 : 3-node Triangle
+%       ,/       |     `\                  E-3 : 4-node quadrilateral
+%     ,/         |       `\                E-4 : 4-node tetrahedron
+%    0-----------'.--------1 --> u         E-5 : 8-node hexahedron
+%     `\.         |      ,/                E-6 : 6-node prism (wedge)
+%        `\.      |    ,/                  E-15: 1-node point
 %           `\.   '. ,/                Other elements can be added to 
 %              `\. |/                  this parser by modifying the 
 %                 `3                   Read Elements stage.
@@ -134,15 +134,19 @@ numElements = sscanf(cells_E{l},'%d');
 
 % Line Format:
 % elm-number elm-type number-of-tags < tag > ... node-number-list
-PE.EToV=[]; PE.phys_tag=[]; PE.geom_tag=[]; PE.part_tag=[]; PE.Etype=[];
-LE.EToV=[]; LE.phys_tag=[]; LE.geom_tag=[]; LE.part_tag=[]; LE.Etype=[];
-SE.EToV=[]; SE.phys_tag=[]; SE.geom_tag=[]; SE.part_tag=[]; SE.Etype=[];
-VE.EToV=[]; VE.phys_tag=[]; VE.geom_tag=[]; VE.part_tag=[]; VE.Etype=[];
+elem = struct('EToV',[],'phys_tag',[],'geom_tag',[],'part_tag',[],'Etype',[]);
+PE = elem;
+LE = elem;
+SE = struct('tri',elem,'quad',elem);
+VE = struct('tet',elem,'hex',elem,'prism',elem);
 
 % Element counters
 numE1 = 0; % Lines Element counter
 numE2 = 0; % Triangle Element counter
-numE4 = 0; % Tetrehedron Element counter
+numE3 = 0; % Quadrilateral Element counter
+numE4 = 0; % Tetrahedron Element counter
+numE5 = 0; % Hexahedron Element counter
+numE6 = 0; % Prism Element counter
 numE15= 0; % point Element counter
 
 % Read elements
@@ -174,43 +178,43 @@ for i = 1:numElements
             end
         case 2 % triangle elements
             numE2 = numE2 + 1; % update element counter
-            SE.Etype(numE2,1) = elementType;
-            SE.EToV(numE2,:) = n(3+numberOfTags+1:end);
+            SE.tri.Etype(numE2,1) = elementType;
+            SE.tri.EToV(numE2,:) = n(3+numberOfTags+(1:3));
             if numberOfTags > 0 % get tags if they exist
                 tags = n(3+(1:numberOfTags)); % get tags
-                % tags(1) : physical entity to which the element belongs
-                % tags(2) : elementary number to which the element belongs
-                % tags(3) : number of partitions to which the element belongs
-                % tags(4) : partition id number
-                if length(tags) >= 1
-                    SE.phys_tag(numE2,1) = tags(1);
-                    if length(tags) >= 2
-                        SE.geom_tag(numE2,1) = tags(2);
-                        if length(tags) >= 4
-                            SE.part_tag(numE2,1) = tags(4);
-                        end
-                    end
-                end
+                SE = assign_element_tags(SE,'tri',numE2,tags);
+            end
+        case 3 % quadrilateral elements
+            numE3 = numE3 + 1; % update element counter
+            SE.quad.Etype(numE3,1) = elementType;
+            SE.quad.EToV(numE3,:) = n(3+numberOfTags+(1:4));
+            if numberOfTags > 0 % get tags if they exist
+                tags = n(3+(1:numberOfTags)); % get tags
+                SE = assign_element_tags(SE,'quad',numE3,tags);
             end
         case 4 % tetrahedron elements
             numE4 = numE4 + 1; % update element counter
-            VE.Etype(numE4,1) = elementType;
-            VE.EToV(numE4,:) = n(3+numberOfTags+1:end);
+            VE.tet.Etype(numE4,1) = elementType;
+            VE.tet.EToV(numE4,:) = n(3+numberOfTags+(1:4));
             if numberOfTags > 0 % get tags if they exist
                 tags = n(3+(1:numberOfTags)); % get tags
-                % tags(1) : physical entity to which the element belongs
-                % tags(2) : elementary number to which the element belongs
-                % tags(3) : number of partitions to which the element belongs
-                % tags(4) : partition id number
-                if length(tags) >= 1
-                    VE.phys_tag(numE4,1) = tags(1);
-                    if length(tags) >= 2
-                        VE.geom_tag(numE4,1) = tags(2);
-                        if length(tags) >= 4
-                            VE.part_tag(numE4,1) = tags(4);
-                        end
-                    end
-                end
+                VE = assign_element_tags(VE,'tet',numE4,tags);
+            end
+        case 5 % hexahedron elements
+            numE5 = numE5 + 1; % update element counter
+            VE.hex.Etype(numE5,1) = elementType;
+            VE.hex.EToV(numE5,:) = n(3+numberOfTags+(1:8));
+            if numberOfTags > 0 % get tags if they exist
+                tags = n(3+(1:numberOfTags)); % get tags
+                VE = assign_element_tags(VE,'hex',numE5,tags);
+            end
+        case 6 % prism (wedge) elements
+            numE6 = numE6 + 1; % update element counter
+            VE.prism.Etype(numE6,1) = elementType;
+            VE.prism.EToV(numE6,:) = n(3+numberOfTags+(1:6));
+            if numberOfTags > 0 % get tags if they exist
+                tags = n(3+(1:numberOfTags)); % get tags
+                VE = assign_element_tags(VE,'prism',numE6,tags);
             end
         case 15 % point element
             numE15 = numE15 + 1; % update element counter
@@ -237,18 +241,43 @@ for i = 1:numElements
 end
 %
 % Find the total number of partitions
-info.numPartitions = max(SE.part_tag);
+part_tags = [SE.tri.part_tag; SE.quad.part_tag; LE.part_tag; ...
+             VE.tet.part_tag; VE.hex.part_tag; VE.prism.part_tag];
+if isempty(part_tags)
+    info.numPartitions = 0;
+else
+    info.numPartitions = max(part_tags);
+end
 %
 fprintf('Total point-elements found = %g\n',numE15);
 fprintf('Total line-elements found = %g\n',numE1);
-fprintf('Total surface-elements found = %g\n',numE2);
-fprintf('Total volume-elements found = %g\n',numE4);
+fprintf('Total triangle-elements found = %g\n',numE2);
+fprintf('Total quadrilateral-elements found = %g\n',numE3);
+fprintf('Total tetrahedron-elements found = %g\n',numE4);
+fprintf('Total hexahedron-elements found = %g\n',numE5);
+fprintf('Total prism-elements found = %g\n',numE6);
 % Sanity check
-if numElements ~= (numE15+numE1+numE2+numE4)
+if numElements ~= (numE15+numE1+numE2+numE3+numE4+numE5+numE6)
     error('Total number of elements missmatch!'); 
 end
 %
 end % GMSHv2 read function
+
+function mesh = assign_element_tags(mesh,kind,idx,tags)
+    % tags(1) : physical entity to which the element belongs
+    % tags(2) : elementary number to which the element belongs
+    % tags(3) : number of partitions to which the element belongs
+    % tags(4) : partition id number
+    if length(tags) >= 1
+        mesh.(kind).phys_tag(idx,1) = tags(1);
+        if length(tags) >= 2
+            mesh.(kind).geom_tag(idx,1) = tags(2);
+            if length(tags) >= 4
+                mesh.(kind).part_tag(idx,1) = tags(4);
+            end
+        end
+    end
+end
 
 function [DEtype,BEtype] = load_convention()
     % Define map of costum domain Elements types (Etype)
