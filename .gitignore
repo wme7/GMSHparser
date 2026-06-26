@@ -35,6 +35,13 @@
 *.npz
 *.npy
 
+# Python
+.venv/
+__pycache__/
+*.py[cod]
+.pytest_cache/
+*.egg-info/
+
 # MacOS
 .DS_Store
 
@@ -43,3 +50,14 @@
 
 # Compiled files
 *.run
+
+# CMake
+build/
+**/build/
+CMakeCache.txt
+CMakeFiles/
+cmake_install.cmake
+install_manifest.txt
+CTestTestfile.cmake
+Testing/
+compile_commands.json

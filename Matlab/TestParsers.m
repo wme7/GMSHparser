@@ -83,14 +83,14 @@ figure(7); subplot(222); viewNodes(V,info);
 figure(8); subplot(222); viewLineElements(V,LE,info);
 figure(9); subplot(222); viewSurfaceElements(V,SE,info);
 
-[V,VE,SE,LE,~,~,info] = GMSHparserV2('../meshes/cuboid_v2.msh');
+[V,VE,SE,LE,~,~,info] = GMSHparserV2('../meshes/box_v2.msh');
 figure(7); subplot(223); viewNodes(V,info);
 figure(8); subplot(223); viewLineElements(V,LE,info);
 figure(9); subplot(223); viewSurfaceElements(V,SE,info);
 figure(10); subplot(221); viewPartVolumes(V,VE,1,info);
 figure(10); subplot(222); viewPartVolumes(V,VE,2,info);
 
-[V,VE,SE,LE,PE,~,info] = GMSHparserV4('../meshes/cuboid_v4.msh');
+[V,VE,SE,LE,PE,~,info] = GMSHparserV4('../meshes/box_v4.msh');
 figure(7); subplot(224); viewNodes(V,info);
 figure(8); subplot(224); viewLineElements(V,LE,info);
 figure(9); subplot(224); viewSurfaceElements(V,SE,info);

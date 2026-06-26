@@ -244,7 +244,7 @@ end
 part_tags = [SE.tri.part_tag; SE.quad.part_tag; LE.part_tag; ...
              VE.tet.part_tag; VE.hex.part_tag; VE.prism.part_tag];
 if isempty(part_tags)
-    info.numPartitions = 0;
+    info.numPartitions = 1;
 else
     info.numPartitions = max(part_tags);
 end

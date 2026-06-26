@@ -1,19 +1,47 @@
-// Gmsh project created on Fri Apr 1 9:13:32 2019
-lc = 0.01;
+// ============================================================
+// 2D rectangular surface mesh
+//
+// Domain: x in [-0.05, 0.05]
+//         y in [-0.03, 0.03]
+//         z =   0.00  (planar)
+//
+// All four boundary edges are tagged as "free_rec".
+// The enclosed surface is tagged as "fluid".
+// ============================================================
 
-Point(1) = {-0.05,-0.03, 0, lc};
-Point(2) = { 0.05,-0.03, 0, lc};
-Point(3) = { 0.05, 0.03, 0, lc};
-Point(4) = {-0.05, 0.03, 0, lc};
-Line(1) = {1, 2};
-Line(2) = {2, 3};
-Line(3) = {3, 4};
-Line(4) = {4, 1};
-Line Loop(5) = {1,2,3,4};
-Plane Surface(6) = {5};
+// -----------------------------------------------------------
+// Mesh resolution parameter
+// -----------------------------------------------------------
+lc = 0.01;   // characteristic element size
 
-// Set mesh Physical parameters
-Physical Line("free_rec") = {1,2,3,4};
-Physical Surface("fluid") = {6};
+// -----------------------------------------------------------
+// Points (z = 0 plane)
+//
+//   4 --------- 3
+//   |           |
+//   1 --------- 2
+// -----------------------------------------------------------
+Point(1) = {-0.05, -0.03, 0, lc};   // bottom-left
+Point(2) = { 0.05, -0.03, 0, lc};   // bottom-right
+Point(3) = { 0.05,  0.03, 0, lc};   // top-right
+Point(4) = {-0.05,  0.03, 0, lc};   // top-left
 
-Mesh.MshFileVersion = 2.2;
+// -----------------------------------------------------------
+// Lines
+// -----------------------------------------------------------
+Line(1) = {1, 2};   // bottom edge
+Line(2) = {2, 3};   // right  edge
+Line(3) = {3, 4};   // top    edge
+Line(4) = {4, 1};   // left   edge
+
+// -----------------------------------------------------------
+// Curve Loop and Surface
+// -----------------------------------------------------------
+Curve Loop(5)     = {1, 2, 3, 4};
+Plane Surface(6)  = {5};
+
+// -----------------------------------------------------------
+// Physical groups
+// -----------------------------------------------------------
+Physical Curve("free_rec", 1)   = {1, 2, 3, 4};
+Physical Surface("fluid",  2)   = {6};

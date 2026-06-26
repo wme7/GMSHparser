@@ -1,0 +1,35 @@
+[build-system]
+requires = ["scikit-build-core>=0.10", "pybind11>=2.13"]
+build-backend = "scikit_build_core.build"
+
+[project]
+name = "gmshparser"
+version = "0.1.0"
+description = "Parse Gmsh .msh files (format v2.2 and v4.1)"
+readme = "README.md"
+requires-python = ">=3.10"
+dependencies = [
+    "numpy>=1.26.0",
+]
+
+[project.optional-dependencies]
+dev = [
+    "gmsh>=4.15.2",
+    "pytest>=8.0",
+    "scipy>=1.11.0",
+]
+plot = [
+    "matplotlib>=3.10.9",
+]
+
+[tool.scikit-build]
+cmake.source-dir = "."
+wheel.packages = ["python/gmshparser"]
+minimum-version = "build-system.requires"
+
+[tool.scikit-build.cmake.define]
+GMSHPARSER_BUILD_TESTS = "OFF"
+GMSHPARSER_BUILD_PYTHON = "ON"
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]

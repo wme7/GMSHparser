@@ -2,17 +2,17 @@
 #define GLOBALS
 
 #include <algorithm>
+#include <fstream>
 #include <iostream>
 #include <iterator>
-#include <fstream>
-#include <sstream>
-#include <string>
-#include <vector>
-#include <tuple>
 #include <map>
+#include <sstream>
+#include <stdexcept>
+#include <string>
+#include <tuple>
+#include <vector>
 
 // local libs
 #include "MdimArray.hpp"
-#include "NpyArray.hpp"
 
 #endif

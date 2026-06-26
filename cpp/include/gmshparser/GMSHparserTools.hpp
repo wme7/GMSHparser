@@ -10,6 +10,7 @@
 //%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
 #include "Globals.hpp"
+#include "Types.hpp"
 
 //%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 // Get a sub-string from the main string-buffer using two unique delimiters:
@@ -148,18 +149,6 @@ size_t parse_rec(const std::string &strName)
     if(DEBUG) std::cout << "active boundary condition, BEtype=" << BEtype << std::endl;
     return BEtype;
 }
-
-//%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-// Element structure to be acquired:
-//%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-struct element
-{
-    std::vector<size_t> EToV;
-    std::vector<int> phys_tag;
-    std::vector<int> geom_tag;
-    std::vector<int> part_tag;
-    std::vector<int> Etype;
-};
 
 //%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 // Split and input strings and return a vector with all double values
@@ -307,7 +296,7 @@ std::tuple<size_t, size_t, int, int> get_partitionedEntity(const std::string &li
 //%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 // Get nodes from block system (GMSG format 4.1)
 //%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-MArray<double,2> get_nodes(const std::string &Nodes, const size_t &numNodesBlocks, const size_t &numNodes, const size_t Dim, const size_t one) 
+MArray<double,2> get_nodes(const std::string &Nodes, const size_t &numNodesBlocks, const size_t &numNodes, const size_t Dim)
 {
     // Allocate output
     MArray<double,2> V({numNodes,Dim},0); // [x(:),y(:),z(:)]
@@ -346,7 +335,7 @@ MArray<double,2> get_nodes(const std::string &Nodes, const size_t &numNodesBlock
         {
             std::getline(buffer, line);
             std::stringstream stream(line);
-            nID = nodeTag[i]-one;
+            nID = nodeTag[i] - 1; // GMSH node tags are 1-based; rows are 0-based
             if (Dim==2) {stream >> V(nID,0) >> V(nID,1);}
             if (Dim==3) {stream >> V(nID,0) >> V(nID,1) >> V(nID,2);}
             n = n+1; // Update node counter
