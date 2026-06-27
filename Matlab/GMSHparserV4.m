@@ -1,4 +1,4 @@
-function [V,VE,SE,LE,PE,mapPhysNames,info] = GMSHparserV4(filename)
+function [V,El,mapPhysNames,info] = GMSHparserV4(filename)
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 %
 %     Extract entities contained in a single GMSH file in format v4.1 
@@ -11,10 +11,9 @@ function [V,VE,SE,LE,PE,mapPhysNames,info] = GMSHparserV4(filename)
 %
 % Output:
 %     V: the vertices (nodes coordinates) -- (Nx3) array
-%    VE: volumetric elements -- structure with fields .tet, .hex and .prism
-%    SE: surface elements -- structure with fields .tri and .quad
-%    LE: curvilinear elements (lines/edges) -- structure
-%    PE: point elements (singular vertices) -- structure
+%    El: mesh elements -- structure with fields .pnt, .lin, .tri, .quad,
+%        .tet, .hex and .prism (each with EToV, phys_tag, geom_tag,
+%        part_tag and Etype)
 %    mapPhysNames: maps phys.tag --> phys.name  -- map structure
 %    info: version, format, endian test -- structure
 %
@@ -254,10 +253,7 @@ numElements     = line_data(2);
 
 % Allocate space for Elements data
 elem = struct('EToV',[],'phys_tag',[],'geom_tag',[],'part_tag',[],'Etype',[]);
-PE = struct('pnt',elem);
-LE = struct('lin',elem);
-SE = struct('tri',elem,'quad',elem);
-VE = struct('tet',elem,'hex',elem,'prism',elem);
+El = struct('pnt',elem,'lin',elem,'tri',elem,'quad',elem,'tet',elem,'hex',elem,'prism',elem);
 
 % Element counters
 numE1 = 0; % 1st-order Lines Element counter
@@ -299,156 +295,156 @@ for ent = 1:numEntityBlocks
         %elementID = line_data(1); % we use a local numbering instead
         switch elementType
             case 1 % 1st-order Line elements
-                [LE, numE1] = assign_element_type(LE, 'lin', numE1, elementType, line_data(2:end), entityTag, curve2Phys);
+                [El, numE1] = assign_element_type(El, 'lin', numE1, elementType, line_data(2:end), entityTag, curve2Phys);
                 if not(info.single_domain)
-                    LE.lin.geom_tag(numE1,1) = curve2Geom(entityTag);
-                    LE.lin.part_tag(numE1,1) = curve2Part(entityTag);
+                    El.lin.geom_tag(numE1,1) = curve2Geom(entityTag);
+                    El.lin.part_tag(numE1,1) = curve2Part(entityTag);
                 else
-                    LE.lin.geom_tag(numE1,1) = entityTag;
+                    El.lin.geom_tag(numE1,1) = entityTag;
                 end
             case 2 % 1st-order Triangle elements
-                [SE, numE2] = assign_element_type(SE, 'tri', numE2, elementType, line_data(2:end), entityTag, surf2Phys);
+                [El, numE2] = assign_element_type(El, 'tri', numE2, elementType, line_data(2:end), entityTag, surf2Phys);
                 if not(info.single_domain)
-                    SE.tri.geom_tag(numE2,1) = surf2Geom(entityTag);
-                    SE.tri.part_tag(numE2,1) = surf2Part(entityTag);
+                    El.tri.geom_tag(numE2,1) = surf2Geom(entityTag);
+                    El.tri.part_tag(numE2,1) = surf2Part(entityTag);
                 else
-                    SE.tri.geom_tag(numE2,1) = entityTag;
+                    El.tri.geom_tag(numE2,1) = entityTag;
                 end
             case 3 % 1st-order Quadrilateral elements
-                [SE, numE3] = assign_element_type(SE, 'quad', numE3, elementType, line_data(2:end), entityTag, surf2Phys);
+                [El, numE3] = assign_element_type(El, 'quad', numE3, elementType, line_data(2:end), entityTag, surf2Phys);
                 if not(info.single_domain)
-                    SE.quad.geom_tag(numE3,1) = surf2Geom(entityTag);
-                    SE.quad.part_tag(numE3,1) = surf2Part(entityTag);
+                    El.quad.geom_tag(numE3,1) = surf2Geom(entityTag);
+                    El.quad.part_tag(numE3,1) = surf2Part(entityTag);
                 else
-                    SE.quad.geom_tag(numE3,1) = entityTag;
+                    El.quad.geom_tag(numE3,1) = entityTag;
                 end
             case 4 % 1st-order Tetrahedron elements
-                [VE, numE4] = assign_element_type(VE, 'tet', numE4, elementType, line_data(2:end), entityTag, volm2Phys);
+                [El, numE4] = assign_element_type(El, 'tet', numE4, elementType, line_data(2:end), entityTag, volm2Phys);
                 if not(info.single_domain)
-                    VE.tet.geom_tag(numE4,1) = volm2Geom(entityTag);
-                    VE.tet.part_tag(numE4,1) = volm2Part(entityTag);
+                    El.tet.geom_tag(numE4,1) = volm2Geom(entityTag);
+                    El.tet.part_tag(numE4,1) = volm2Part(entityTag);
                 else 
-                    VE.tet.geom_tag(numE4,1) = entityTag;
+                    El.tet.geom_tag(numE4,1) = entityTag;
                 end
             case 5 % 1st-order Hexahedron elements
-                [VE, numE5] = assign_element_type(VE, 'hex', numE5, elementType, line_data(2:end), entityTag, volm2Phys);
+                [El, numE5] = assign_element_type(El, 'hex', numE5, elementType, line_data(2:end), entityTag, volm2Phys);
                 if not(info.single_domain)
-                    VE.hex.geom_tag(numE5,1) = volm2Geom(entityTag);
-                    VE.hex.part_tag(numE5,1) = volm2Part(entityTag);
+                    El.hex.geom_tag(numE5,1) = volm2Geom(entityTag);
+                    El.hex.part_tag(numE5,1) = volm2Part(entityTag);
                 else
-                    VE.hex.geom_tag(numE5,1) = entityTag;
+                    El.hex.geom_tag(numE5,1) = entityTag;
                 end
             case 6 % 1st-order Prism (wedge) elements
-                [VE, numE6] = assign_element_type(VE, 'prism', numE6, elementType, line_data(2:end), entityTag, volm2Phys);
+                [El, numE6] = assign_element_type(El, 'prism', numE6, elementType, line_data(2:end), entityTag, volm2Phys);
                 if not(info.single_domain)
-                    VE.prism.geom_tag(numE6,1) = volm2Geom(entityTag);
-                    VE.prism.part_tag(numE6,1) = volm2Part(entityTag);
+                    El.prism.geom_tag(numE6,1) = volm2Geom(entityTag);
+                    El.prism.part_tag(numE6,1) = volm2Part(entityTag);
                 else
-                    VE.prism.geom_tag(numE6,1) = entityTag;
+                    El.prism.geom_tag(numE6,1) = entityTag;
                 end
             case 8 % 2nd-order Line elements
-                [LE, numE8] = assign_element_type(LE, 'lin', numE8, elementType, line_data(2:end), entityTag, curve2Phys);
+                [El, numE8] = assign_element_type(El, 'lin', numE8, elementType, line_data(2:end), entityTag, curve2Phys);
                 if not(info.single_domain)
-                    LE.lin.geom_tag(numE8,1) = curve2Geom(entityTag);
-                    LE.lin.part_tag(numE8,1) = curve2Part(entityTag);
+                    El.lin.geom_tag(numE8,1) = curve2Geom(entityTag);
+                    El.lin.part_tag(numE8,1) = curve2Part(entityTag);
                 else
-                    LE.lin.geom_tag(numE8,1) = entityTag;
+                    El.lin.geom_tag(numE8,1) = entityTag;
                 end
             case 9 % 2nd-order Triangle elements
-                [SE, numE9] = assign_element_type(SE, 'tri', numE9, elementType, line_data(2:end), entityTag, surf2Phys);
+                [El, numE9] = assign_element_type(El, 'tri', numE9, elementType, line_data(2:end), entityTag, surf2Phys);
                 if not(info.single_domain)
-                    SE.tri.geom_tag(numE9,1) = surf2Geom(entityTag);
-                    SE.tri.part_tag(numE9,1) = surf2Part(entityTag);
+                    El.tri.geom_tag(numE9,1) = surf2Geom(entityTag);
+                    El.tri.part_tag(numE9,1) = surf2Part(entityTag);
                 else
-                    SE.tri.geom_tag(numE9,1) = entityTag;
+                    El.tri.geom_tag(numE9,1) = entityTag;
                 end
             case 10 % 2nd-order Quadrilateral elements
-                [SE, numE10] = assign_element_type(SE, 'quad', numE10, elementType, line_data(2:end), entityTag, surf2Phys);
+                [El, numE10] = assign_element_type(El, 'quad', numE10, elementType, line_data(2:end), entityTag, surf2Phys);
                 if not(info.single_domain)
-                    SE.quad.geom_tag(numE10,1) = surf2Geom(entityTag);
-                    SE.quad.part_tag(numE10,1) = surf2Part(entityTag);
+                    El.quad.geom_tag(numE10,1) = surf2Geom(entityTag);
+                    El.quad.part_tag(numE10,1) = surf2Part(entityTag);
                 else
-                    SE.quad.geom_tag(numE10,1) = entityTag;
+                    El.quad.geom_tag(numE10,1) = entityTag;
                 end
             case 11 % 2nd-order Tetrahedron elements
-                [VE, numE11] = assign_element_type(VE, 'tet', numE11, elementType, line_data(2:end), entityTag, volm2Phys);
+                [El, numE11] = assign_element_type(El, 'tet', numE11, elementType, line_data(2:end), entityTag, volm2Phys);
                 if not(info.single_domain)
-                    VE.tet.geom_tag(numE11,1) = volm2Geom(entityTag);
-                    VE.tet.part_tag(numE11,1) = volm2Part(entityTag);
+                    El.tet.geom_tag(numE11,1) = volm2Geom(entityTag);
+                    El.tet.part_tag(numE11,1) = volm2Part(entityTag);
                 else
-                    VE.tet.geom_tag(numE11,1) = entityTag;
+                    El.tet.geom_tag(numE11,1) = entityTag;
                 end
             case 12 % 2nd-order Hexahedron elements
-                [VE, numE12] = assign_element_type(VE, 'hex', numE12, elementType, line_data(2:end), entityTag, volm2Phys);
+                [El, numE12] = assign_element_type(El, 'hex', numE12, elementType, line_data(2:end), entityTag, volm2Phys);
                 if not(info.single_domain)
-                    VE.hex.geom_tag(numE12,1) = volm2Geom(entityTag);
-                    VE.hex.part_tag(numE12,1) = volm2Part(entityTag);
+                    El.hex.geom_tag(numE12,1) = volm2Geom(entityTag);
+                    El.hex.part_tag(numE12,1) = volm2Part(entityTag);
                 else
-                    VE.hex.geom_tag(numE12,1) = entityTag;
+                    El.hex.geom_tag(numE12,1) = entityTag;
                 end
             case 13 % 2nd-order Prism (wedge) elements
-                [VE, numE13] = assign_element_type(VE, 'prism', numE13, elementType, line_data(2:end), entityTag, volm2Phys);
+                [El, numE13] = assign_element_type(El, 'prism', numE13, elementType, line_data(2:end), entityTag, volm2Phys);
                 if not(info.single_domain)
-                    VE.prism.geom_tag(numE13,1) = volm2Geom(entityTag);
-                    VE.prism.part_tag(numE13,1) = volm2Part(entityTag);
+                    El.prism.geom_tag(numE13,1) = volm2Geom(entityTag);
+                    El.prism.part_tag(numE13,1) = volm2Part(entityTag);
                 else
-                    VE.prism.geom_tag(numE13,1) = entityTag;
+                    El.prism.geom_tag(numE13,1) = entityTag;
                 end
             case 26 % 3rd-order Line elements
-                [LE, numE26] = assign_element_type(LE, 'lin', numE26, elementType, line_data(2:end), entityTag, curve2Phys);
+                [El, numE26] = assign_element_type(El, 'lin', numE26, elementType, line_data(2:end), entityTag, curve2Phys);
                 if not(info.single_domain)
-                    LE.lin.geom_tag(numE26,1) = curve2Geom(entityTag);
-                    LE.lin.part_tag(numE26,1) = curve2Part(entityTag);
+                    El.lin.geom_tag(numE26,1) = curve2Geom(entityTag);
+                    El.lin.part_tag(numE26,1) = curve2Part(entityTag);
                 else
-                    LE.lin.geom_tag(numE26,1) = entityTag;
+                    El.lin.geom_tag(numE26,1) = entityTag;
                 end
             case 21 % 3rd-order Triangle elements
-                [SE, numE21] = assign_element_type(SE, 'tri', numE21, elementType, line_data(2:end), entityTag, surf2Phys);
+                [El, numE21] = assign_element_type(El, 'tri', numE21, elementType, line_data(2:end), entityTag, surf2Phys);
                 if not(info.single_domain)
-                    SE.tri.geom_tag(numE21,1) = surf2Geom(entityTag);
-                    SE.tri.part_tag(numE21,1) = surf2Part(entityTag);
+                    El.tri.geom_tag(numE21,1) = surf2Geom(entityTag);
+                    El.tri.part_tag(numE21,1) = surf2Part(entityTag);
                 else
-                    SE.tri.geom_tag(numE21,1) = entityTag;
+                    El.tri.geom_tag(numE21,1) = entityTag;
                 end
             case 36 % 3rd-order Quadrilateral elements
-                [SE, numE36] = assign_element_type(SE, 'quad', numE36, elementType, line_data(2:end), entityTag, surf2Phys);
+                [El, numE36] = assign_element_type(El, 'quad', numE36, elementType, line_data(2:end), entityTag, surf2Phys);
                 if not(info.single_domain)
-                    SE.quad.geom_tag(numE36,1) = surf2Geom(entityTag);
-                    SE.quad.part_tag(numE36,1) = surf2Part(entityTag);
+                    El.quad.geom_tag(numE36,1) = surf2Geom(entityTag);
+                    El.quad.part_tag(numE36,1) = surf2Part(entityTag);
                 else
-                    SE.quad.geom_tag(numE36,1) = entityTag;
+                    El.quad.geom_tag(numE36,1) = entityTag;
                 end
             case 29 % 3rd-order Tetrahedron elements
-                [VE, numE29] = assign_element_type(VE, 'tet', numE29, elementType, line_data(2:end), entityTag, volm2Phys);
+                [El, numE29] = assign_element_type(El, 'tet', numE29, elementType, line_data(2:end), entityTag, volm2Phys);
                 if not(info.single_domain)
-                    VE.tet.geom_tag(numE29,1) = volm2Geom(entityTag);
-                    VE.tet.part_tag(numE29,1) = volm2Part(entityTag);
+                    El.tet.geom_tag(numE29,1) = volm2Geom(entityTag);
+                    El.tet.part_tag(numE29,1) = volm2Part(entityTag);
                 else
-                    VE.tet.geom_tag(numE29,1) = entityTag;
+                    El.tet.geom_tag(numE29,1) = entityTag;
                 end
             case 92 % 3rd-order Hexahedron elements
-                [VE, numE92] = assign_element_type(VE, 'hex', numE92, elementType, line_data(2:end), entityTag, volm2Phys);
+                [El, numE92] = assign_element_type(El, 'hex', numE92, elementType, line_data(2:end), entityTag, volm2Phys);
                 if not(info.single_domain)
-                    VE.hex.geom_tag(numE92,1) = volm2Geom(entityTag);
-                    VE.hex.part_tag(numE92,1) = volm2Part(entityTag);
+                    El.hex.geom_tag(numE92,1) = volm2Geom(entityTag);
+                    El.hex.part_tag(numE92,1) = volm2Part(entityTag);
                 else
-                    VE.hex.geom_tag(numE92,1) = entityTag;
+                    El.hex.geom_tag(numE92,1) = entityTag;
                 end
             case 90 % 3rd-order Prism (wedge) elements
-                [VE, numE90] = assign_element_type(VE, 'prism', numE90, elementType, line_data(2:end), entityTag, volm2Phys);
+                [El, numE90] = assign_element_type(El, 'prism', numE90, elementType, line_data(2:end), entityTag, volm2Phys);
                 if not(info.single_domain)
-                    VE.prism.geom_tag(numE90,1) = volm2Geom(entityTag);
-                    VE.prism.part_tag(numE90,1) = volm2Part(entityTag);
+                    El.prism.geom_tag(numE90,1) = volm2Geom(entityTag);
+                    El.prism.part_tag(numE90,1) = volm2Part(entityTag);
                 else
-                    VE.prism.geom_tag(numE90,1) = entityTag;
+                    El.prism.geom_tag(numE90,1) = entityTag;
                 end
             case 15 % Point elements
-                [PE, numE15] = assign_element_type(PE, 'pnt', numE15, elementType, line_data(2:end), entityTag, point2Phys);
+                [El, numE15] = assign_element_type(El, 'pnt', numE15, elementType, line_data(2:end), entityTag, point2Phys);
                 if not(info.single_domain)
-                    PE.pnt.geom_tag(numE15,1) = point2Geom(entityTag);
-                    PE.pnt.part_tag(numE15,1) = point2Part(entityTag);
+                    El.pnt.geom_tag(numE15,1) = point2Geom(entityTag);
+                    El.pnt.part_tag(numE15,1) = point2Part(entityTag);
                 else
-                    PE.pnt.geom_tag(numE15,1) = entityTag;
+                    El.pnt.geom_tag(numE15,1) = entityTag;
                 end
             otherwise, error('ERROR: element type not in list');
         end
@@ -510,11 +506,11 @@ end
 %
 end % GMSHv4 read function
 
-function [E, idx] = assign_element_type(E, kind, idx, elementType, connectivity, entityTag, physMap)
+function [El, idx] = assign_element_type(El, kind, idx, elementType, connectivity, entityTag, physMap)
     idx = idx + 1; % update element counter
-    E.(kind).Etype(idx,1) = elementType;
-    E.(kind).EToV(idx,:) = connectivity;
-    E.(kind).phys_tag(idx,1) = physMap(entityTag);
+    El.(kind).Etype(idx,1) = elementType;
+    El.(kind).EToV(idx,:) = connectivity;
+    El.(kind).phys_tag(idx,1) = physMap(entityTag);
 end
 
 % Get single entity information:

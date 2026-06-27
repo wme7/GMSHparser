@@ -194,9 +194,23 @@ export_test_references
 
 See `Matlab/GMSHparserV2.m`, `Matlab/GMSHparserV4.m`, and `Matlab/TestParsers.m`.
 
+Both parsers return the same four outputs:
+
 ```matlab
-[V, VE, SE, LE, PE, mapPhysNames, info] = GMSHparserV2('../meshes/square_tri_v2.msh');
+[V, El, mapPhysNames, info] = GMSHparserV2('../meshes/square_tri_v2.msh');
+% or
+[V, El, mapPhysNames, info] = GMSHparserV4('../meshes/simple_box_v4.msh');
 ```
+
+`El` groups all element blocks by geometry (`.pnt`, `.lin`, `.tri`, `.quad`, `.tet`, `.hex`, `.prism`). Each field holds `EToV`, `phys_tag`, `geom_tag`, `part_tag`, and `Etype`. High-order elements share the same buckets as linear ones; use `info.element_order` and per-element `Etype` for order.
+
+```matlab
+El.tri.EToV
+El.lin.phys_tag
+El.tet.part_tag
+```
+
+Field names align conceptually with the Python/C++ blocks (`El.tri` ≈ `SE_tri`, `El.tet` ≈ `VE_tet`, …).
 
 ---
 

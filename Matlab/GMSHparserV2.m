@@ -1,4 +1,4 @@
-function [V,VE,SE,LE,PE,mapPhysNames,info] = GMSHparserV2(filename)
+function [V,El,mapPhysNames,info] = GMSHparserV2(filename)
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 %
 %     Extract entities contained in a single GMSH file in format v2.2 
@@ -11,10 +11,9 @@ function [V,VE,SE,LE,PE,mapPhysNames,info] = GMSHparserV2(filename)
 %
 % Output:
 %     V: the vertices (nodes coordinates) -- (Nx3) array
-%    VE: volumetric elements -- structure with fields .tet, .hex and .prism
-%    SE: surface elements -- structure with fields .tri and .quad
-%    LE: curvilinear elements (lines/edges) -- structure
-%    PE: point elements (singular vertices) -- structure
+%    El: mesh elements -- structure with fields .pnt, .lin, .tri, .quad,
+%        .tet, .hex and .prism (each with EToV, phys_tag, geom_tag,
+%        part_tag and Etype)
 %    mapPhysNames: maps phys.tag --> phys.name  -- map structure
 %    info: version, format, endian test -- structure
 %
@@ -138,10 +137,7 @@ numElements = sscanf(cells_E{l},'%d');
 % Line Format:
 % elm-number elm-type number-of-tags < tag > ... node-number-list
 elem = struct('EToV',[],'phys_tag',[],'geom_tag',[],'part_tag',[],'Etype',[]);
-PE = struct('pnt',elem);
-LE = struct('lin',elem);
-SE = struct('tri',elem,'quad',elem);
-VE = struct('tet',elem,'hex',elem,'prism',elem);
+El = struct('pnt',elem,'lin',elem,'tri',elem,'quad',elem,'tet',elem,'hex',elem,'prism',elem);
 
 % Element counters
 numE1 = 0; % 1st-order Lines Element counter
@@ -176,164 +172,164 @@ for i = 1:numElements
     switch elementType
         case 1 % 1st-order Line elements
             numE1 = numE1 + 1; % update element counter
-            LE.lin.Etype(numE1,1) = elementType;
-            LE.lin.EToV(numE1,:) = n(3+numberOfTags+1:end);
+            El.lin.Etype(numE1,1) = elementType;
+            El.lin.EToV(numE1,:) = n(3+numberOfTags+1:end);
             if numberOfTags > 0 % get tags if they exist
                 tags = n(3+(1:numberOfTags)); % get tags
-                LE = assign_element_tags(LE,'lin',numE1,tags);
+                El = assign_element_tags(El,'lin',numE1,tags);
             end
         case 2 % 1st-order Triangle elements
             numE2 = numE2 + 1; % update element counter
-            SE.tri.Etype(numE2,1) = elementType;
-            SE.tri.EToV(numE2,:) = n(3+numberOfTags+1:end);
+            El.tri.Etype(numE2,1) = elementType;
+            El.tri.EToV(numE2,:) = n(3+numberOfTags+1:end);
             if numberOfTags > 0 % get tags if they exist
                 tags = n(3+(1:numberOfTags)); % get tags
-                SE = assign_element_tags(SE,'tri',numE2,tags);
+                El = assign_element_tags(El,'tri',numE2,tags);
             end
         case 3 % 1st-order Quadrilateral elements
             numE3 = numE3 + 1; % update element counter
-            SE.quad.Etype(numE3,1) = elementType;
-            SE.quad.EToV(numE3,:) = n(3+numberOfTags+1:end);
+            El.quad.Etype(numE3,1) = elementType;
+            El.quad.EToV(numE3,:) = n(3+numberOfTags+1:end);
             if numberOfTags > 0 % get tags if they exist
                 tags = n(3+(1:numberOfTags)); % get tags
-                SE = assign_element_tags(SE,'quad',numE3,tags);
+                El = assign_element_tags(El,'quad',numE3,tags);
             end
         case 4 % 1st-order Tetrahedron elements
             numE4 = numE4 + 1; % update element counter
-            VE.tet.Etype(numE4,1) = elementType;
-            VE.tet.EToV(numE4,:) = n(3+numberOfTags+1:end);
+            El.tet.Etype(numE4,1) = elementType;
+            El.tet.EToV(numE4,:) = n(3+numberOfTags+1:end);
             if numberOfTags > 0 % get tags if they exist
                 tags = n(3+(1:numberOfTags)); % get tags
-                VE = assign_element_tags(VE,'tet',numE4,tags);
+                El = assign_element_tags(El,'tet',numE4,tags);
             end
         case 5 % 1st-order Hexahedron elements
             numE5 = numE5 + 1; % update element counter
-            VE.hex.Etype(numE5,1) = elementType;
-            VE.hex.EToV(numE5,:) = n(3+numberOfTags+1:end);
+            El.hex.Etype(numE5,1) = elementType;
+            El.hex.EToV(numE5,:) = n(3+numberOfTags+1:end);
             if numberOfTags > 0 % get tags if they exist
                 tags = n(3+(1:numberOfTags)); % get tags
-                VE = assign_element_tags(VE,'hex',numE5,tags);
+                El = assign_element_tags(El,'hex',numE5,tags);
             end
         case 6 % 1st-order Prism (wedge) elements
             numE6 = numE6 + 1; % update element counter
-            VE.prism.Etype(numE6,1) = elementType;
-            VE.prism.EToV(numE6,:) = n(3+numberOfTags+1:end);
+            El.prism.Etype(numE6,1) = elementType;
+            El.prism.EToV(numE6,:) = n(3+numberOfTags+1:end);
             if numberOfTags > 0 % get tags if they exist
                 tags = n(3+(1:numberOfTags)); % get tags
-                VE = assign_element_tags(VE,'prism',numE6,tags);
+                El = assign_element_tags(El,'prism',numE6,tags);
             end
         case 8 % 2nd-order Line elements
             numE8 = numE8 + 1; % update element counter
-            LE.lin.Etype(numE8,1) = elementType;
-            LE.lin.EToV(numE8,:) = n(3+numberOfTags+1:end);
+            El.lin.Etype(numE8,1) = elementType;
+            El.lin.EToV(numE8,:) = n(3+numberOfTags+1:end);
             if numberOfTags > 0 % get tags if they exist
                 tags = n(3+(1:numberOfTags)); % get tags
-                LE = assign_element_tags(LE,'lin',numE8,tags);
+                El = assign_element_tags(El,'lin',numE8,tags);
             end
         case 9 % 2nd-order Triangle elements
             numE9 = numE9 + 1; % update element counter
-            SE.tri.Etype(numE9,1) = elementType;
-            SE.tri.EToV(numE9,:) = n(3+numberOfTags+1:end);
+            El.tri.Etype(numE9,1) = elementType;
+            El.tri.EToV(numE9,:) = n(3+numberOfTags+1:end);
             if numberOfTags > 0 % get tags if they exist
                 tags = n(3+(1:numberOfTags)); % get tags
-                SE = assign_element_tags(SE,'tri',numE9,tags);
+                El = assign_element_tags(El,'tri',numE9,tags);
             end
         case 10 % 2nd-order Quadrilateral elements
             numE10 = numE10 + 1; % update element counter
-            SE.quad.Etype(numE10,1) = elementType;
-            SE.quad.EToV(numE10,:) = n(3+numberOfTags+1:end);
+            El.quad.Etype(numE10,1) = elementType;
+            El.quad.EToV(numE10,:) = n(3+numberOfTags+1:end);
             if numberOfTags > 0 % get tags if they exist
                 tags = n(3+(1:numberOfTags)); % get tags
-                SE = assign_element_tags(SE,'quad',numE10,tags);
+                El = assign_element_tags(El,'quad',numE10,tags);
             end
         case 11 % 2nd-order Tetrahedron elements
             numE11 = numE11 + 1; % update element counter
-            VE.tet.Etype(numE11,1) = elementType;
-            VE.tet.EToV(numE11,:) = n(3+numberOfTags+1:end);
+            El.tet.Etype(numE11,1) = elementType;
+            El.tet.EToV(numE11,:) = n(3+numberOfTags+1:end);
             if numberOfTags > 0 % get tags if they exist
                 tags = n(3+(1:numberOfTags)); % get tags
-                VE = assign_element_tags(VE,'tet',numE11,tags);
+                El = assign_element_tags(El,'tet',numE11,tags);
             end
         case 12 % 2nd-order Hexahedron elements
             numE12 = numE12 + 1; % update element counter
-            VE.hex.Etype(numE12,1) = elementType;
-            VE.hex.EToV(numE12,:) = n(3+numberOfTags+1:end);
+            El.hex.Etype(numE12,1) = elementType;
+            El.hex.EToV(numE12,:) = n(3+numberOfTags+1:end);
             if numberOfTags > 0 % get tags if they exist
                 tags = n(3+(1:numberOfTags)); % get tags
-                VE = assign_element_tags(VE,'hex',numE12,tags);
+                El = assign_element_tags(El,'hex',numE12,tags);
             end
         case 13 % 2nd-order Prism (wedge) elements
             numE13 = numE13 + 1; % update element counter
-            VE.prism.Etype(numE13,1) = elementType;
-            VE.prism.EToV(numE13,:) = n(3+numberOfTags+1:end);
+            El.prism.Etype(numE13,1) = elementType;
+            El.prism.EToV(numE13,:) = n(3+numberOfTags+1:end);
             if numberOfTags > 0 % get tags if they exist
                 tags = n(3+(1:numberOfTags)); % get tags
-                VE = assign_element_tags(VE,'prism',numE13,tags);
+                El = assign_element_tags(El,'prism',numE13,tags);
             end
         case 26 % 3rd-order Line elements
             numE26 = numE26 + 1; % update element counter
-            LE.lin.Etype(numE26,1) = elementType;
-            LE.lin.EToV(numE26,:) = n(3+numberOfTags+1:end);
+            El.lin.Etype(numE26,1) = elementType;
+            El.lin.EToV(numE26,:) = n(3+numberOfTags+1:end);
             if numberOfTags > 0 % get tags if they exist
                 tags = n(3+(1:numberOfTags)); % get tags
-                LE = assign_element_tags(LE,'lin',numE26,tags);
+                El = assign_element_tags(El,'lin',numE26,tags);
             end
         case 21 % 3rd-order Triangle elements
             numE21 = numE21 + 1; % update element counter
-            SE.tri.Etype(numE21,1) = elementType;
-            SE.tri.EToV(numE21,:) = n(3+numberOfTags+1:end);
+            El.tri.Etype(numE21,1) = elementType;
+            El.tri.EToV(numE21,:) = n(3+numberOfTags+1:end);
             if numberOfTags > 0 % get tags if they exist
                 tags = n(3+(1:numberOfTags)); % get tags
-                SE = assign_element_tags(SE,'tri',numE21,tags);
+                El = assign_element_tags(El,'tri',numE21,tags);
             end
         case 36 % 3rd-order Quadrilateral elements
             numE36 = numE36 + 1; % update element counter
-            SE.quad.Etype(numE36,1) = elementType;
-            SE.quad.EToV(numE36,:) = n(3+numberOfTags+1:end);
+            El.quad.Etype(numE36,1) = elementType;
+            El.quad.EToV(numE36,:) = n(3+numberOfTags+1:end);
             if numberOfTags > 0 % get tags if they exist
                 tags = n(3+(1:numberOfTags)); % get tags
-                SE = assign_element_tags(SE,'quad',numE36,tags);
+                El = assign_element_tags(El,'quad',numE36,tags);
             end
         case 29 % 3rd-order Tetrahedron elements
             numE29 = numE29 + 1; % update element counter
-            VE.tet.Etype(numE29,1) = elementType;
-            VE.tet.EToV(numE29,:) = n(3+numberOfTags+1:end);
+            El.tet.Etype(numE29,1) = elementType;
+            El.tet.EToV(numE29,:) = n(3+numberOfTags+1:end);
             if numberOfTags > 0 % get tags if they exist
                 tags = n(3+(1:numberOfTags)); % get tags
-                VE = assign_element_tags(VE,'tet',numE29,tags);
+                El = assign_element_tags(El,'tet',numE29,tags);
             end
         case 92 % 3rd-order Hexahedron elements
             numE92 = numE92 + 1; % update element counter
-            VE.hex.Etype(numE92,1) = elementType;
-            VE.hex.EToV(numE92,:) = n(3+numberOfTags+1:end);
+            El.hex.Etype(numE92,1) = elementType;
+            El.hex.EToV(numE92,:) = n(3+numberOfTags+1:end);
             if numberOfTags > 0 % get tags if they exist
                 tags = n(3+(1:numberOfTags)); % get tags
-                VE = assign_element_tags(VE,'hex',numE92,tags);
+                El = assign_element_tags(El,'hex',numE92,tags);
             end
         case 90 % 3rd-order Prism (wedge) elements
             numE90 = numE90 + 1; % update element counter
-            VE.prism.Etype(numE90,1) = elementType;
-            VE.prism.EToV(numE90,:) = n(3+numberOfTags+1:end);
+            El.prism.Etype(numE90,1) = elementType;
+            El.prism.EToV(numE90,:) = n(3+numberOfTags+1:end);
             if numberOfTags > 0 % get tags if they exist
                 tags = n(3+(1:numberOfTags)); % get tags
-                VE = assign_element_tags(VE,'prism',numE90,tags);
+                El = assign_element_tags(El,'prism',numE90,tags);
             end
         case 15 % Point element
             numE15 = numE15 + 1; % update element counter
-            PE.pnt.Etype(numE15,1) = elementType;
-            PE.pnt.EToV(numE15,:) = n(3+numberOfTags+1:end);
+            El.pnt.Etype(numE15,1) = elementType;
+            El.pnt.EToV(numE15,:) = n(3+numberOfTags+1:end);
             if numberOfTags > 0 % if they exist
                 tags = n(3+(1:numberOfTags)); % get tags
-                PE = assign_element_tags(PE,'pnt',numE15,tags);
+                El = assign_element_tags(El,'pnt',numE15,tags);
             end
         otherwise, error('ERROR: element type not in list');
     end
 end
 %
 % Find the total number of partitions
-part_tags = [SE.tri.part_tag; SE.quad.part_tag; LE.lin.part_tag; ...
-             VE.tet.part_tag; VE.hex.part_tag; VE.prism.part_tag; ...
-             PE.pnt.part_tag];
+part_tags = [El.tri.part_tag; El.quad.part_tag; El.lin.part_tag; ...
+             El.tet.part_tag; El.hex.part_tag; El.prism.part_tag; ...
+             El.pnt.part_tag];
 if isempty(part_tags)
     info.single_domain = true;
     info.numPartitions = 1;
@@ -397,17 +393,17 @@ end
 %
 end % GMSHv2 read function
 
-function mesh = assign_element_tags(mesh,kind,idx,tags)
+function El = assign_element_tags(El,kind,idx,tags)
     % tags(1) : physical entity to which the element belongs
     % tags(2) : elementary number to which the element belongs
     % tags(3) : number of partitions to which the element belongs
     % tags(4) : partition id number
     if length(tags) >= 1
-        mesh.(kind).phys_tag(idx,1) = tags(1);
+        El.(kind).phys_tag(idx,1) = tags(1);
         if length(tags) >= 2
-            mesh.(kind).geom_tag(idx,1) = tags(2);
+            El.(kind).geom_tag(idx,1) = tags(2);
             if length(tags) >= 4
-                mesh.(kind).part_tag(idx,1) = tags(4);
+                El.(kind).part_tag(idx,1) = tags(4);
             end
         end
     end

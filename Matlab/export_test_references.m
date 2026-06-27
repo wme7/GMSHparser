@@ -50,22 +50,22 @@ function export_test_references()
         parser = meshes{i, 2};
         mesh_path = fullfile(mesh_dir, mesh_name);
         fprintf('Exporting %s\n', mesh_name);
-        [V, VE, SE, LE, PE, mapPhysNames, info] = parser(mesh_path);
-        data = matlab_mesh_to_reference(V, VE, SE, LE, PE, mapPhysNames, info);
+        [V, El, mapPhysNames, info] = parser(mesh_path);
+        data = matlab_mesh_to_reference(V, El, mapPhysNames, info);
         out_path = fullfile(ref_dir, replace(mesh_name, '.msh', '.mat'));
         save(out_path, '-struct', 'data', '-v7');
     end
 end
 
-function data = matlab_mesh_to_reference(V, VE, SE, LE, PE, mapPhysNames, info)
+function data = matlab_mesh_to_reference(V, El, mapPhysNames, info)
     data.V = pad_vertices(V, info.Dim);
-    data = append_block(data, 'PE', PE.pnt, 1);
-    data = append_block(data, 'LE', LE.lin, 2);
-    data = append_block(data, 'SE_tri', SE.tri, 3);
-    data = append_block(data, 'SE_quad', SE.quad, 4);
-    data = append_block(data, 'VE_tet', VE.tet, 4);
-    data = append_block(data, 'VE_hex', VE.hex, 8);
-    data = append_block(data, 'VE_prism', VE.prism, 6);
+    data = append_block(data, 'PE', El.pnt, 1);
+    data = append_block(data, 'LE', El.lin, 2);
+    data = append_block(data, 'SE_tri', El.tri, 3);
+    data = append_block(data, 'SE_quad', El.quad, 4);
+    data = append_block(data, 'VE_tet', El.tet, 4);
+    data = append_block(data, 'VE_hex', El.hex, 8);
+    data = append_block(data, 'VE_prism', El.prism, 6);
 
     data.info_version = info.version;
     data.info_format = info.file_type;
