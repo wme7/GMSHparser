@@ -40,20 +40,12 @@ def test_parse_default_one_is_zero_based(mesh_path: Path) -> None:
         mesh_native = gmshparser.parse_v4(mesh_path)
         mesh_gmsh = gmshparser.parse_v4(mesh_path, one=0)
 
-    for block_name in (
-        "LE",
-        "SE_tri",
-        "SE_quad",
-        "VE_tet",
-        "VE_hex",
-        "VE_prism",
-        "PE",
-    ):
-        native = getattr(mesh_native, block_name)
-        gmsh = getattr(mesh_gmsh, block_name)
+    for name in gmshparser.GEOMETRY_BLOCKS:
+        native = getattr(mesh_native.El, name)
+        gmsh = getattr(mesh_gmsh.El, name)
         if native.num_elements == 0:
             continue
-        assert np.array_equal(native.EToV, gmsh.EToV - 1), block_name
+        assert np.array_equal(native.EToV, gmsh.EToV - 1), name
 
 
 @pytest.mark.parametrize("mesh_path", MESH_PATHS, ids=lambda p: p.name)
@@ -90,15 +82,11 @@ def test_v2_v4_geometry_consistency(stem: str, mesh_dir: Path) -> None:
     assert mesh_v2.info.num_nodes == mesh_v4.info.num_nodes
     assert mesh_v2.info.phys_DIM == mesh_v4.info.phys_DIM
     assert mesh_v2.info.element_order == mesh_v4.info.element_order
-    assert mesh_v2.PE.num_elements == mesh_v4.PE.num_elements
-    assert mesh_v2.LE.num_elements == mesh_v4.LE.num_elements
-    assert mesh_v2.SE_tri.num_elements == mesh_v4.SE_tri.num_elements
-    assert mesh_v2.VE_tet.num_elements == mesh_v4.VE_tet.num_elements
-    assert mesh_v2.VE_hex.num_elements == mesh_v4.VE_hex.num_elements
-    assert mesh_v2.VE_prism.num_elements == mesh_v4.VE_prism.num_elements
 
-    if stem not in V2_V4_QUAD_COUNT_MISMATCH_STEMS:
-        assert mesh_v2.SE_quad.num_elements == mesh_v4.SE_quad.num_elements
+    for name in gmshparser.GEOMETRY_BLOCKS:
+        if name == "quad" and stem in V2_V4_QUAD_COUNT_MISMATCH_STEMS:
+            continue
+        assert getattr(mesh_v2.El, name).num_elements == getattr(mesh_v4.El, name).num_elements
 
     assert mesh_v2.physical_names == mesh_v4.physical_names
 
@@ -132,14 +120,14 @@ def test_high_order_connectivity_shapes(
     assert mesh.info.element_order == order
 
     if le_nodes:
-        assert mesh.LE.nodes_per_element == le_nodes
-        assert mesh.LE.EToV.shape == (mesh.LE.num_elements, le_nodes)
+        assert mesh.El.lin.nodes_per_element == le_nodes
+        assert mesh.El.lin.EToV.shape == (mesh.El.lin.num_elements, le_nodes)
     if tri_nodes:
-        assert mesh.SE_tri.nodes_per_element == tri_nodes
-        assert mesh.SE_tri.EToV.shape == (mesh.SE_tri.num_elements, tri_nodes)
+        assert mesh.El.tri.nodes_per_element == tri_nodes
+        assert mesh.El.tri.EToV.shape == (mesh.El.tri.num_elements, tri_nodes)
     if hex_nodes:
-        assert mesh.VE_hex.nodes_per_element == hex_nodes
-        assert mesh.VE_hex.EToV.shape == (mesh.VE_hex.num_elements, hex_nodes)
+        assert mesh.El.hex.nodes_per_element == hex_nodes
+        assert mesh.El.hex.EToV.shape == (mesh.El.hex.num_elements, hex_nodes)
     if prism_nodes:
-        assert mesh.VE_prism.nodes_per_element == prism_nodes
-        assert mesh.VE_prism.EToV.shape == (mesh.VE_prism.num_elements, prism_nodes)
+        assert mesh.El.prism.nodes_per_element == prism_nodes
+        assert mesh.El.prism.EToV.shape == (mesh.El.prism.num_elements, prism_nodes)

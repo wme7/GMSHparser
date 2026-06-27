@@ -49,16 +49,6 @@ struct ElementCounters {
     }
 };
 
-struct ElementBlocks {
-    ElementBlock& PE;
-    ElementBlock& LE;
-    ElementBlock& SE_tri;
-    ElementBlock& SE_quad;
-    ElementBlock& VE_tet;
-    ElementBlock& VE_hex;
-    ElementBlock& VE_prism;
-};
-
 enum class EntityKind { Point, Curve, Surface, Volume };
 
 inline EntityKind entity_kind_for_type(size_t gmsh_type)
@@ -80,23 +70,23 @@ inline EntityKind entity_kind_for_type(size_t gmsh_type)
     }
 }
 
-inline ElementBlock* block_for_gmsh_type(size_t gmsh_type, ElementBlocks blocks)
+inline ElementBlock* block_for_gmsh_type(size_t gmsh_type, MeshElements& El)
 {
     switch (lookup_element_type(gmsh_type).geometry) {
     case ElementGeometry::Point:
-        return &blocks.PE;
+        return &El.pnt;
     case ElementGeometry::Line:
-        return &blocks.LE;
+        return &El.lin;
     case ElementGeometry::Triangle:
-        return &blocks.SE_tri;
+        return &El.tri;
     case ElementGeometry::Quadrilateral:
-        return &blocks.SE_quad;
+        return &El.quad;
     case ElementGeometry::Tetrahedron:
-        return &blocks.VE_tet;
+        return &El.tet;
     case ElementGeometry::Hexahedron:
-        return &blocks.VE_hex;
+        return &El.hex;
     case ElementGeometry::Prism:
-        return &blocks.VE_prism;
+        return &El.prism;
     default:
         return nullptr;
     }

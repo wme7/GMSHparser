@@ -8,16 +8,20 @@ from typing import Any, Union
 
 from numpy.typing import NDArray
 
-from ._gmshparser import ElementBlock, Mesh, MeshInfo, ParseOptions
+from ._gmshparser import ElementBlock, Mesh, MeshElements, MeshInfo, ParseOptions
 from ._gmshparser import parse as _parse
 from ._gmshparser import parse_v2 as _parse_v2
 from ._gmshparser import parse_v4 as _parse_v4
 
 PathArg = Union[str, os.PathLike[str]]
 
+GEOMETRY_BLOCKS = ("pnt", "lin", "tri", "quad", "tet", "hex", "prism")
+
 __all__ = [
     "ElementBlock",
+    "GEOMETRY_BLOCKS",
     "Mesh",
+    "MeshElements",
     "MeshInfo",
     "ParseOptions",
     "as_dict",
@@ -81,23 +85,23 @@ def parse(
 
 
 def as_dict(mesh: Mesh) -> dict[str, NDArray[Any]]:
-    """Return mesh arrays using legacy npz-style key names."""
+    """Return mesh arrays as a flat dictionary of NumPy arrays."""
 
-    def block(prefix: str, block: ElementBlock, etov_key: str) -> dict[str, NDArray[Any]]:
+    def block(name: str, elem: ElementBlock) -> dict[str, NDArray[Any]]:
         return {
-            etov_key: block.EToV,
-            f"{prefix}_phys_tag": block.phys_tag,
-            f"{prefix}_geom_tag": block.geom_tag,
-            f"{prefix}_part_tag": block.part_tag,
-            f"{prefix}_Etype": block.Etype,
+            f"{name}_EToV": elem.EToV,
+            f"{name}_phys_tag": elem.phys_tag,
+            f"{name}_geom_tag": elem.geom_tag,
+            f"{name}_part_tag": elem.part_tag,
+            f"{name}_Etype": elem.Etype,
         }
 
     data: dict[str, NDArray[Any]] = {"V": mesh.V}
-    data.update(block("PE", mesh.PE, "PEToV"))
-    data.update(block("LE", mesh.LE, "LEToV"))
-    data.update(block("SE_tri", mesh.SE_tri, "SE_tri_EToV"))
-    data.update(block("SE_quad", mesh.SE_quad, "SE_quad_EToV"))
-    data.update(block("VE_tet", mesh.VE_tet, "VE_tet_EToV"))
-    data.update(block("VE_hex", mesh.VE_hex, "VE_hex_EToV"))
-    data.update(block("VE_prism", mesh.VE_prism, "VE_prism_EToV"))
+    for name in GEOMETRY_BLOCKS:
+        data.update(block(name, getattr(mesh.El, name)))
     return data
+
+
+from ._summarize import attach_mesh_display
+
+attach_mesh_display()

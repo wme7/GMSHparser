@@ -20,7 +20,25 @@ Supported element types (ASCII only; binary meshes are rejected):
 | Hexahedron | 5, 12, 92 | 8 / 27 / 64 |
 | Prism | 6, 13, 90 | 6 / 18 / 40 |
 
-High-order elements share the same output buckets as linear ones (`LE`, `SE_tri`, …). Per-element Gmsh type IDs are stored in `Etype`; `info.element_order` reports the global mesh order (1, 2, or 3). Gmsh uses a single polynomial order per mesh — mixed-order files are not supported.
+High-order elements share the same geometry buckets as linear ones (`El.lin`, `El.tri`, …). Per-element Gmsh type IDs are stored in `Etype`; `info.element_order` reports the global mesh order (1, 2, or 3). Gmsh uses a single polynomial order per mesh — mixed-order files are not supported.
+
+## Mesh output
+
+All parsers return vertices, a single element container `El`, physical-name metadata, and mesh info.
+
+| Field | C++ | Python | Matlab |
+|-------|-----|--------|--------|
+| Vertices | `mesh.V` | `mesh.V` | `V` |
+| Elements | `mesh.El` | `mesh.El` | `El` |
+| Physical names | `mesh.phys_names` | `mesh.physical_names` | `mapPhysNames` |
+| Mesh info | `mesh.info` | `mesh.info` | `info` |
+
+`El` groups elements by geometry. Each block (`pnt`, `lin`, `tri`, `quad`, `tet`, `hex`, `prism`) holds:
+
+- `EToV` — node connectivity (0-based by default in C++/Python; use `one=0` / `ParseOptions.one=0` for Gmsh 1-based tags)
+- `phys_tag`, `geom_tag`, `part_tag`, `Etype`
+
+Python `gmshparser.as_dict(mesh)` and Matlab `export_test_references` flatten these blocks to arrays named `{geom}_EToV`, `{geom}_phys_tag`, … (e.g. `tri_EToV`, `lin_phys_tag`).
 
 ![](./Matlab/figures/ScreenCapture.png)
 
@@ -70,9 +88,12 @@ ctest --test-dir build --output-on-failure
 
 int main() {
     auto mesh = gmshparser::parse_gmsh_v4("mesh.msh");
-    // mesh.V, mesh.SE_tri, mesh.phys_names, mesh.info, ...
+    mesh.El.tri.EToV;
+    mesh.El.lin.phys_tag;
+    mesh.phys_names;
+    mesh.info.element_order;
 
-    // Matlab-compatible 1-based GMSH tags:
+    // Gmsh/Matlab 1-based tags:
     gmshparser::ParseOptions matlab_opts;
     matlab_opts.one = 0;
     auto mesh_gmsh = gmshparser::parse_gmsh_v4("mesh.msh", matlab_opts);
@@ -85,7 +106,7 @@ int main() {
 - `one` (default `1`): subtract from node/partition indices for 0-based C/Python use; set to `0` to preserve GMSH 1-based tags (Matlab convention).
 - `debug` (default `false`): print parser stage messages to stdout.
 
-Legacy entry points that print a short summary are still available:
+Demo entry points that print element counts are also available:
 
 ```cpp
 #include <gmshparser/GMSHparserV2.hpp>
@@ -149,15 +170,26 @@ opts.debug = True
 mesh = gmshparser.parse_v2("meshes/square_tri_v2.msh", options=opts)
 
 print(mesh.V.shape)
-print(mesh.SE_tri.EToV)
+print(mesh.El.tri.EToV)
 print(mesh.physical_names)
 print(mesh.info.version)
 print(mesh.info.element_order)
-print(mesh.SE_tri.nodes_per_element)
-print(mesh.SE_tri.EToV.shape)
+print(mesh.El.tri.nodes_per_element)
+print(mesh.El.tri.EToV.shape)
 ```
 
-`gmshparser.as_dict(mesh)` returns a flat dictionary of NumPy arrays using the legacy key names (`SE_tri_EToV`, `VE_tet_phys_tag`, …).
+`gmshparser.as_dict(mesh)` returns a flat dictionary of NumPy arrays (`tri_EToV`, `lin_phys_tag`, …).
+
+Inspect a parsed mesh in the REPL or scripts:
+
+```python
+mesh = gmshparser.parse("meshes/square_tri_v2.msh")
+mesh                                     # <Mesh 2D v2.2 order=1 nodes=142>
+mesh.show()                              # print full summary (includes indexing note)
+print(mesh.describe(path="..."))         # or build the string yourself
+```
+
+`mesh.one` records the index convention used at parse time (`1` → 0-based Python indices, `0` → Gmsh/Matlab 1-based tags). The indexing note in `describe()` / `show()` uses that value automatically.
 
 ### Example scripts
 
@@ -183,7 +215,7 @@ uv run python examples/plot_mesh.py meshes/simple_box_v4.msh --volume
 uv run pytest
 ```
 
-Reference data live in `tests/reference/` (28 meshes: square/simple fixtures plus `sector_*` HO cases). They are exported from Matlab (`Matlab/export_test_references.m`) and compared with `one=0`. The Python default `one=1` is for 0-based C/Python indexing.
+Reference data live in `tests/reference/` (28 meshes: square/simple fixtures plus `sector_*` HO cases). Export from Matlab with `Matlab/export_test_references.m` (or `tests/generate_references.py` from Python). Pytest compares parser output with `one=0` against those files.
 
 ```matlab
 cd Matlab
@@ -194,23 +226,11 @@ export_test_references
 
 See `Matlab/GMSHparserV2.m`, `Matlab/GMSHparserV4.m`, and `Matlab/TestParsers.m`.
 
-Both parsers return the same four outputs:
-
 ```matlab
 [V, El, mapPhysNames, info] = GMSHparserV2('../meshes/square_tri_v2.msh');
-% or
-[V, El, mapPhysNames, info] = GMSHparserV4('../meshes/simple_box_v4.msh');
-```
-
-`El` groups all element blocks by geometry (`.pnt`, `.lin`, `.tri`, `.quad`, `.tet`, `.hex`, `.prism`). Each field holds `EToV`, `phys_tag`, `geom_tag`, `part_tag`, and `Etype`. High-order elements share the same buckets as linear ones; use `info.element_order` and per-element `Etype` for order.
-
-```matlab
 El.tri.EToV
 El.lin.phys_tag
-El.tet.part_tag
 ```
-
-Field names align conceptually with the Python/C++ blocks (`El.tri` ≈ `SE_tri`, `El.tet` ≈ `VE_tet`, …).
 
 ---
 

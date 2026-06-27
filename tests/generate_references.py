@@ -1,7 +1,6 @@
-"""Generate tests/reference/*.mat from the current Python parser (one=1).
+"""Generate tests/reference/*.mat from the Python parser (one=0).
 
 Prefer Matlab/export_test_references.m for authoritative gold references.
-Do not run this script unless you intentionally want Python-native references.
 """
 
 from __future__ import annotations
@@ -12,7 +11,6 @@ from pathlib import Path
 REPO_ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(REPO_ROOT))
 
-import numpy as np
 from scipy.io import savemat
 
 import gmshparser

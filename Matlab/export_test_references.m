@@ -59,13 +59,13 @@ end
 
 function data = matlab_mesh_to_reference(V, El, mapPhysNames, info)
     data.V = pad_vertices(V, info.Dim);
-    data = append_block(data, 'PE', El.pnt, 1);
-    data = append_block(data, 'LE', El.lin, 2);
-    data = append_block(data, 'SE_tri', El.tri, 3);
-    data = append_block(data, 'SE_quad', El.quad, 4);
-    data = append_block(data, 'VE_tet', El.tet, 4);
-    data = append_block(data, 'VE_hex', El.hex, 8);
-    data = append_block(data, 'VE_prism', El.prism, 6);
+    data = append_block(data, 'pnt', El.pnt, 1);
+    data = append_block(data, 'lin', El.lin, 2);
+    data = append_block(data, 'tri', El.tri, 3);
+    data = append_block(data, 'quad', El.quad, 4);
+    data = append_block(data, 'tet', El.tet, 4);
+    data = append_block(data, 'hex', El.hex, 8);
+    data = append_block(data, 'prism', El.prism, 6);
 
     data.info_version = info.version;
     data.info_format = info.file_type;
@@ -88,7 +88,7 @@ function Vout = pad_vertices(V, dim)
 end
 
 function data = append_block(data, prefix, block, nodes_per_elem)
-    etov_key = etov_field_name(prefix);
+    etov_key = [prefix '_EToV'];
 
     if isempty(block.Etype)
         data.(etov_key) = zeros(0, nodes_per_elem);
@@ -99,20 +99,9 @@ function data = append_block(data, prefix, block, nodes_per_elem)
         return;
     end
 
-    num_elements = size(block.Etype, 1);
     data.(etov_key) = block.EToV;
     data.([prefix '_phys_tag']) = block.phys_tag;
     data.([prefix '_geom_tag']) = block.geom_tag;
     data.([prefix '_part_tag']) = block.part_tag;
     data.([prefix '_Etype']) = block.Etype;
-end
-
-function key = etov_field_name(prefix)
-    if strcmp(prefix, 'PE')
-        key = 'PEToV';
-    elseif strcmp(prefix, 'LE')
-        key = 'LEToV';
-    else
-        key = [prefix '_EToV'];
-    end
 end

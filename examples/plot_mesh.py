@@ -37,11 +37,11 @@ def _plot_lines_2d(ax, V: np.ndarray, etov: np.ndarray, *, color: str = "C0") ->
 
 def _plot_surface_2d(ax, V: np.ndarray, mesh: Mesh) -> None:
     xy = V[:, :2]
-    if mesh.SE_tri.num_elements:
-        tri = mtri.Triangulation(xy[:, 0], xy[:, 1], mesh.SE_tri.EToV)
+    if mesh.El.tri.num_elements:
+        tri = mtri.Triangulation(xy[:, 0], xy[:, 1], mesh.El.tri.EToV)
         ax.triplot(tri, color="0.35", lw=0.4)
-    if mesh.SE_quad.num_elements:
-        for quad in mesh.SE_quad.EToV:
+    if mesh.El.quad.num_elements:
+        for quad in mesh.El.quad.EToV:
             pts = xy[quad]
             closed = np.vstack([pts, pts[:1]])
             ax.plot(closed[:, 0], closed[:, 1], color="0.35", lw=0.4)
@@ -79,14 +79,14 @@ def _plot_wireframe_3d(ax, V: np.ndarray, etov: np.ndarray, *, color: str = "0.3
 
 
 def _plot_boundary_3d(ax, V: np.ndarray, mesh: Mesh) -> None:
-    if mesh.SE_tri.num_elements:
-        ax.add_collection3d(_poly_collection(V, mesh.SE_tri.EToV))
-    if mesh.SE_quad.num_elements:
-        ax.add_collection3d(_poly_collection(V, mesh.SE_quad.EToV))
+    if mesh.El.tri.num_elements:
+        ax.add_collection3d(_poly_collection(V, mesh.El.tri.EToV))
+    if mesh.El.quad.num_elements:
+        ax.add_collection3d(_poly_collection(V, mesh.El.quad.EToV))
 
 
 def _plot_volume_3d(ax, V: np.ndarray, mesh: Mesh) -> None:
-    for block in (mesh.VE_tet, mesh.VE_hex, mesh.VE_prism):
+    for block in (mesh.El.tet, mesh.El.hex, mesh.El.prism):
         _plot_wireframe_3d(ax, V, block.EToV)
 
 
@@ -112,8 +112,8 @@ def plot_mesh(mesh_path: Path, mesh: Mesh, *, show_volume: bool, show_lines: boo
 
     if dim == 2:
         fig, ax = plt.subplots(figsize=(6, 6))
-        if show_lines and mesh.LE.num_elements:
-            _plot_lines_2d(ax, V, mesh.LE.EToV, color="C3")
+        if show_lines and mesh.El.lin.num_elements:
+            _plot_lines_2d(ax, V, mesh.El.lin.EToV, color="C3")
         _plot_surface_2d(ax, V, mesh)
         ax.set_xlabel("x")
         ax.set_ylabel("y")
@@ -126,8 +126,8 @@ def plot_mesh(mesh_path: Path, mesh: Mesh, *, show_volume: bool, show_lines: boo
             _plot_volume_3d(ax, V, mesh)
         else:
             _plot_boundary_3d(ax, V, mesh)
-        if show_lines and mesh.LE.num_elements:
-            _plot_wireframe_3d(ax, V, mesh.LE.EToV, color="C3")
+        if show_lines and mesh.El.lin.num_elements:
+            _plot_wireframe_3d(ax, V, mesh.El.lin.EToV, color="C3")
         for axis, label in zip((ax.set_xlabel, ax.set_ylabel, ax.set_zlabel), _axis_labels(3)):
             axis(label)
         ax.set_title(title)

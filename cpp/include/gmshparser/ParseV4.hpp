@@ -286,15 +286,7 @@ inline GmshMesh parse_gmsh_v4(const std::string& mesh_file, ParseOptions opts = 
     if (debug) std::cout << " maxElemIndex: " << maxElemIndex - one << std::endl;
     std::getline(buffer_E, line);
 
-    ElementBlock PE;
-    ElementBlock LE;
-    ElementBlock SE_tri;
-    ElementBlock SE_quad;
-    ElementBlock VE_tet;
-    ElementBlock VE_hex;
-    ElementBlock VE_prism;
-
-    ElementBlocks blocks{PE, LE, SE_tri, SE_quad, VE_tet, VE_hex, VE_prism};
+    MeshElements El;
     ElementCounters counters;
 
     for (size_t Ent = 0; Ent < numEntBlocks; Ent++) {
@@ -311,7 +303,7 @@ inline GmshMesh parse_gmsh_v4(const std::string& mesh_file, ParseOptions opts = 
             throw std::runtime_error("Element type not in list");
         }
 
-        ElementBlock* block = block_for_gmsh_type(elementType, blocks);
+        ElementBlock* block = block_for_gmsh_type(elementType, El);
         size_t* counter = counter_for_gmsh_type(elementType, counters);
         if (block == nullptr || counter == nullptr) {
             throw std::runtime_error("Element type not in list");
@@ -361,13 +353,7 @@ inline GmshMesh parse_gmsh_v4(const std::string& mesh_file, ParseOptions opts = 
 
     GmshMesh mesh;
     mesh.V = std::move(V);
-    mesh.PE = std::move(PE);
-    mesh.LE = std::move(LE);
-    mesh.SE_tri = std::move(SE_tri);
-    mesh.SE_quad = std::move(SE_quad);
-    mesh.VE_tet = std::move(VE_tet);
-    mesh.VE_hex = std::move(VE_hex);
-    mesh.VE_prism = std::move(VE_prism);
+    mesh.El = std::move(El);
     mesh.phys_names = std::move(phys2names);
     mesh.info.version = version;
     mesh.info.format = format;

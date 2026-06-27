@@ -40,28 +40,50 @@ struct MeshInfo {
     size_t element_order = 0; // 0: points only; 1/2/3: global mesh polynomial order
 };
 
+struct MeshElements {
+    ElementBlock pnt;
+    ElementBlock lin;
+    ElementBlock tri;
+    ElementBlock quad;
+    ElementBlock tet;
+    ElementBlock hex;
+    ElementBlock prism;
+};
+
+template <typename Fn>
+void for_each_element_block(MeshElements& El, Fn&& fn)
+{
+    fn(El.pnt);
+    fn(El.lin);
+    fn(El.tri);
+    fn(El.quad);
+    fn(El.tet);
+    fn(El.hex);
+    fn(El.prism);
+}
+
+template <typename Fn>
+void for_each_element_block(const MeshElements& El, Fn&& fn)
+{
+    fn(El.pnt);
+    fn(El.lin);
+    fn(El.tri);
+    fn(El.quad);
+    fn(El.tet);
+    fn(El.hex);
+    fn(El.prism);
+}
+
 struct GmshMesh {
     MArray<double, 2> V;
-    ElementBlock PE;
-    ElementBlock LE;
-    ElementBlock SE_tri;
-    ElementBlock SE_quad;
-    ElementBlock VE_tet;
-    ElementBlock VE_hex;
-    ElementBlock VE_prism;
+    MeshElements El;
     std::map<size_t, std::string> phys_names;
     MeshInfo info;
 };
 
 inline void clear_part_tags(GmshMesh& mesh)
 {
-    mesh.PE.part_tag.clear();
-    mesh.LE.part_tag.clear();
-    mesh.SE_tri.part_tag.clear();
-    mesh.SE_quad.part_tag.clear();
-    mesh.VE_tet.part_tag.clear();
-    mesh.VE_hex.part_tag.clear();
-    mesh.VE_prism.part_tag.clear();
+    for_each_element_block(mesh.El, [](ElementBlock& block) { block.part_tag.clear(); });
 }
 
 } // namespace gmshparser

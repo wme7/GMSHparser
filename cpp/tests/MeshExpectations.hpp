@@ -12,8 +12,8 @@ struct MeshExpectation {
     std::size_t nodes;
     std::size_t phys_dim;
     std::size_t element_order;
-    std::size_t pe;
-    std::size_t le;
+    std::size_t pnt;
+    std::size_t lin;
     std::size_t tri;
     std::size_t quad;
     std::size_t tet;
@@ -61,13 +61,13 @@ inline void assert_mesh_expectation(const gmshparser::GmshMesh& mesh, const Mesh
     assert(mesh.info.num_nodes == expected.nodes);
     assert(mesh.info.phys_DIM == expected.phys_dim);
     assert(mesh.info.element_order == expected.element_order);
-    assert(mesh.PE.num_elements() == expected.pe);
-    assert(mesh.LE.num_elements() == expected.le);
-    assert(mesh.SE_tri.num_elements() == expected.tri);
-    assert(mesh.SE_quad.num_elements() == expected.quad);
-    assert(mesh.VE_tet.num_elements() == expected.tet);
-    assert(mesh.VE_hex.num_elements() == expected.hex);
-    assert(mesh.VE_prism.num_elements() == expected.prism);
+    assert(mesh.El.pnt.num_elements() == expected.pnt);
+    assert(mesh.El.lin.num_elements() == expected.lin);
+    assert(mesh.El.tri.num_elements() == expected.tri);
+    assert(mesh.El.quad.num_elements() == expected.quad);
+    assert(mesh.El.tet.num_elements() == expected.tet);
+    assert(mesh.El.hex.num_elements() == expected.hex);
+    assert(mesh.El.prism.num_elements() == expected.prism);
 }
 
 #endif

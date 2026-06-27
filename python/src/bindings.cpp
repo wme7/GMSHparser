@@ -85,30 +85,42 @@ PyElementBlock element_block_to_python(const gmshparser::ElementBlock& block)
     return out;
 }
 
+struct PyMeshElements {
+    PyElementBlock pnt;
+    PyElementBlock lin;
+    PyElementBlock tri;
+    PyElementBlock quad;
+    PyElementBlock tet;
+    PyElementBlock hex;
+    PyElementBlock prism;
+};
+
+PyMeshElements elements_to_python(const gmshparser::MeshElements& El)
+{
+    PyMeshElements out;
+    out.pnt = element_block_to_python(El.pnt);
+    out.lin = element_block_to_python(El.lin);
+    out.tri = element_block_to_python(El.tri);
+    out.quad = element_block_to_python(El.quad);
+    out.tet = element_block_to_python(El.tet);
+    out.hex = element_block_to_python(El.hex);
+    out.prism = element_block_to_python(El.prism);
+    return out;
+}
+
 struct PyMesh {
     py::array_t<double> V;
-    PyElementBlock PE;
-    PyElementBlock LE;
-    PyElementBlock SE_tri;
-    PyElementBlock SE_quad;
-    PyElementBlock VE_tet;
-    PyElementBlock VE_hex;
-    PyElementBlock VE_prism;
+    PyMeshElements El;
     std::map<std::size_t, std::string> physical_names;
     gmshparser::MeshInfo info;
+    int one = 1;
 };
 
 PyMesh mesh_to_python(const gmshparser::GmshMesh& mesh)
 {
     PyMesh out;
     out.V = vertices_to_numpy(mesh.V);
-    out.PE = element_block_to_python(mesh.PE);
-    out.LE = element_block_to_python(mesh.LE);
-    out.SE_tri = element_block_to_python(mesh.SE_tri);
-    out.SE_quad = element_block_to_python(mesh.SE_quad);
-    out.VE_tet = element_block_to_python(mesh.VE_tet);
-    out.VE_hex = element_block_to_python(mesh.VE_hex);
-    out.VE_prism = element_block_to_python(mesh.VE_prism);
+    out.El = elements_to_python(mesh.El);
     out.physical_names = mesh.phys_names;
     out.info = mesh.info;
     return out;
@@ -147,12 +159,16 @@ double detect_mesh_version(const std::string& mesh_file)
 
 PyMesh parse_v2_py(const std::string& mesh_file, const gmshparser::ParseOptions& opts = {})
 {
-    return mesh_to_python(gmshparser::parse_gmsh_v2(mesh_file, opts));
+    PyMesh out = mesh_to_python(gmshparser::parse_gmsh_v2(mesh_file, opts));
+    out.one = static_cast<int>(opts.one);
+    return out;
 }
 
 PyMesh parse_v4_py(const std::string& mesh_file, const gmshparser::ParseOptions& opts = {})
 {
-    return mesh_to_python(gmshparser::parse_gmsh_v4(mesh_file, opts));
+    PyMesh out = mesh_to_python(gmshparser::parse_gmsh_v4(mesh_file, opts));
+    out.one = static_cast<int>(opts.one);
+    return out;
 }
 
 PyMesh parse_py(const std::string& mesh_file, const gmshparser::ParseOptions& opts = {})
@@ -179,6 +195,18 @@ void bind_element_block(py::module& m, const char* name)
         .def_readonly("nodes_per_element", &PyElementBlock::nodes_per_element);
 }
 
+void bind_mesh_elements(py::module& m, const char* name)
+{
+    py::class_<PyMeshElements>(m, name)
+        .def_readonly("pnt", &PyMeshElements::pnt)
+        .def_readonly("lin", &PyMeshElements::lin)
+        .def_readonly("tri", &PyMeshElements::tri)
+        .def_readonly("quad", &PyMeshElements::quad)
+        .def_readonly("tet", &PyMeshElements::tet)
+        .def_readonly("hex", &PyMeshElements::hex)
+        .def_readonly("prism", &PyMeshElements::prism);
+}
+
 } // namespace
 
 PYBIND11_MODULE(_gmshparser, m)
@@ -201,18 +229,14 @@ PYBIND11_MODULE(_gmshparser, m)
         .def_readwrite("debug", &gmshparser::ParseOptions::debug);
 
     bind_element_block(m, "ElementBlock");
+    bind_mesh_elements(m, "MeshElements");
 
     py::class_<PyMesh>(m, "Mesh")
         .def_readonly("V", &PyMesh::V)
-        .def_readonly("PE", &PyMesh::PE)
-        .def_readonly("LE", &PyMesh::LE)
-        .def_readonly("SE_tri", &PyMesh::SE_tri)
-        .def_readonly("SE_quad", &PyMesh::SE_quad)
-        .def_readonly("VE_tet", &PyMesh::VE_tet)
-        .def_readonly("VE_hex", &PyMesh::VE_hex)
-        .def_readonly("VE_prism", &PyMesh::VE_prism)
+        .def_readonly("El", &PyMesh::El)
         .def_readonly("physical_names", &PyMesh::physical_names)
-        .def_readonly("info", &PyMesh::info);
+        .def_readonly("info", &PyMesh::info)
+        .def_readonly("one", &PyMesh::one);
 
     m.def(
         "parse_v2",
