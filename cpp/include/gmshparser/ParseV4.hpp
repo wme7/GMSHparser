@@ -1,11 +1,61 @@
 #ifndef GMSH_PARSE_V4_HPP
 #define GMSH_PARSE_V4_HPP
 
+#include "ElementTypes.hpp"
 #include "Globals.hpp"
 #include "GMSHparserTools.hpp"
+#include "ParseHelpers.hpp"
 #include "Types.hpp"
 
 namespace gmshparser {
+
+namespace detail {
+
+inline void resolve_v4_entity_tags(
+    EntityKind kind,
+    size_t entityTag,
+    bool single_domain,
+    const std::map<size_t, int>& point2phys,
+    const std::map<size_t, int>& point2geom,
+    const std::map<size_t, int>& point2part,
+    const std::map<size_t, int>& curve2phys,
+    const std::map<size_t, int>& curve2geom,
+    const std::map<size_t, int>& curve2part,
+    const std::map<size_t, int>& surf2phys,
+    const std::map<size_t, int>& surf2geom,
+    const std::map<size_t, int>& surf2part,
+    const std::map<size_t, int>& volm2phys,
+    const std::map<size_t, int>& volm2geom,
+    const std::map<size_t, int>& volm2part,
+    int& phys_tag,
+    int& geom_tag,
+    int& part_tag)
+{
+    switch (kind) {
+    case EntityKind::Point:
+        phys_tag = point2phys.at(entityTag);
+        geom_tag = single_domain ? static_cast<int>(entityTag) : point2geom.at(entityTag);
+        part_tag = point2part.count(entityTag) ? point2part.at(entityTag) : 0;
+        break;
+    case EntityKind::Curve:
+        phys_tag = curve2phys.at(entityTag);
+        geom_tag = single_domain ? static_cast<int>(entityTag) : curve2geom.at(entityTag);
+        part_tag = curve2part.count(entityTag) ? curve2part.at(entityTag) : 0;
+        break;
+    case EntityKind::Surface:
+        phys_tag = surf2phys.at(entityTag);
+        geom_tag = single_domain ? static_cast<int>(entityTag) : surf2geom.at(entityTag);
+        part_tag = surf2part.count(entityTag) ? surf2part.at(entityTag) : 0;
+        break;
+    case EntityKind::Volume:
+        phys_tag = volm2phys.at(entityTag);
+        geom_tag = single_domain ? static_cast<int>(entityTag) : volm2geom.at(entityTag);
+        part_tag = volm2part.count(entityTag) ? volm2part.at(entityTag) : 0;
+        break;
+    }
+}
+
+} // namespace detail
 
 inline GmshMesh parse_gmsh_v4(const std::string& mesh_file, ParseOptions opts = {})
 {
@@ -244,13 +294,8 @@ inline GmshMesh parse_gmsh_v4(const std::string& mesh_file, ParseOptions opts = 
     ElementBlock VE_hex;
     ElementBlock VE_prism;
 
-    size_t numE1 = 0;
-    size_t numE2 = 0;
-    size_t numE3 = 0;
-    size_t numE4 = 0;
-    size_t numE5 = 0;
-    size_t numE6 = 0;
-    size_t numE15 = 0;
+    ElementBlocks blocks{PE, LE, SE_tri, SE_quad, VE_tet, VE_hex, VE_prism};
+    ElementCounters counters;
 
     for (size_t Ent = 0; Ent < numEntBlocks; Ent++) {
         std::getline(buffer_E, line);
@@ -262,123 +307,56 @@ inline GmshMesh parse_gmsh_v4(const std::string& mesh_file, ParseOptions opts = 
         size_t numElementsInBlock;
         s_stream >> entityDim >> entityTag >> elementType >> numElementsInBlock;
 
+        if (!is_supported_element_type(elementType)) {
+            throw std::runtime_error("Element type not in list");
+        }
+
+        ElementBlock* block = block_for_gmsh_type(elementType, blocks);
+        size_t* counter = counter_for_gmsh_type(elementType, counters);
+        if (block == nullptr || counter == nullptr) {
+            throw std::runtime_error("Element type not in list");
+        }
+
+        const EntityKind entity_kind = entity_kind_for_type(elementType);
+
         for (size_t i = 0; i < numElementsInBlock; i++) {
             std::getline(buffer_E, line);
             auto line_data = str2size_t(line);
-            switch (elementType) {
-            case 1:
-                numE1 = numE1 + 1;
-                LE.Etype.push_back(elementType);
-                LE.EToV.push_back(line_data[1] - one);
-                LE.EToV.push_back(line_data[2] - one);
-                LE.phys_tag.push_back(curve2phys[entityTag]);
-                if (not(single_domain)) {
-                    LE.geom_tag.push_back(curve2geom[entityTag]);
-                    LE.part_tag.push_back(curve2part[entityTag] - one);
-                } else {
-                    LE.geom_tag.push_back(entityTag);
-                }
-                break;
-            case 2:
-                numE2 = numE2 + 1;
-                SE_tri.Etype.push_back(elementType);
-                SE_tri.EToV.push_back(line_data[1] - one);
-                SE_tri.EToV.push_back(line_data[2] - one);
-                SE_tri.EToV.push_back(line_data[3] - one);
-                SE_tri.phys_tag.push_back(surf2phys[entityTag]);
-                if (not(single_domain)) {
-                    SE_tri.geom_tag.push_back(surf2geom[entityTag]);
-                    SE_tri.part_tag.push_back(surf2part[entityTag] - one);
-                } else {
-                    SE_tri.geom_tag.push_back(entityTag);
-                }
-                break;
-            case 3:
-                numE3 = numE3 + 1;
-                SE_quad.Etype.push_back(elementType);
-                SE_quad.EToV.push_back(line_data[1] - one);
-                SE_quad.EToV.push_back(line_data[2] - one);
-                SE_quad.EToV.push_back(line_data[3] - one);
-                SE_quad.EToV.push_back(line_data[4] - one);
-                SE_quad.phys_tag.push_back(surf2phys[entityTag]);
-                if (not(single_domain)) {
-                    SE_quad.geom_tag.push_back(surf2geom[entityTag]);
-                    SE_quad.part_tag.push_back(surf2part[entityTag] - one);
-                } else {
-                    SE_quad.geom_tag.push_back(entityTag);
-                }
-                break;
-            case 4:
-                numE4 = numE4 + 1;
-                VE_tet.Etype.push_back(elementType);
-                VE_tet.EToV.push_back(line_data[1] - one);
-                VE_tet.EToV.push_back(line_data[2] - one);
-                VE_tet.EToV.push_back(line_data[3] - one);
-                VE_tet.EToV.push_back(line_data[4] - one);
-                VE_tet.phys_tag.push_back(volm2phys[entityTag]);
-                if (not(single_domain)) {
-                    VE_tet.geom_tag.push_back(volm2geom[entityTag]);
-                    VE_tet.part_tag.push_back(volm2part[entityTag] - one);
-                } else {
-                    VE_tet.geom_tag.push_back(entityTag);
-                }
-                break;
-            case 5:
-                numE5 = numE5 + 1;
-                VE_hex.Etype.push_back(elementType);
-                VE_hex.EToV.push_back(line_data[1] - one);
-                VE_hex.EToV.push_back(line_data[2] - one);
-                VE_hex.EToV.push_back(line_data[3] - one);
-                VE_hex.EToV.push_back(line_data[4] - one);
-                VE_hex.EToV.push_back(line_data[5] - one);
-                VE_hex.EToV.push_back(line_data[6] - one);
-                VE_hex.EToV.push_back(line_data[7] - one);
-                VE_hex.EToV.push_back(line_data[8] - one);
-                VE_hex.phys_tag.push_back(volm2phys[entityTag]);
-                if (not(single_domain)) {
-                    VE_hex.geom_tag.push_back(volm2geom[entityTag]);
-                    VE_hex.part_tag.push_back(volm2part[entityTag] - one);
-                } else {
-                    VE_hex.geom_tag.push_back(entityTag);
-                }
-                break;
-            case 6:
-                numE6 = numE6 + 1;
-                VE_prism.Etype.push_back(elementType);
-                VE_prism.EToV.push_back(line_data[1] - one);
-                VE_prism.EToV.push_back(line_data[2] - one);
-                VE_prism.EToV.push_back(line_data[3] - one);
-                VE_prism.EToV.push_back(line_data[4] - one);
-                VE_prism.EToV.push_back(line_data[5] - one);
-                VE_prism.EToV.push_back(line_data[6] - one);
-                VE_prism.phys_tag.push_back(volm2phys[entityTag]);
-                if (not(single_domain)) {
-                    VE_prism.geom_tag.push_back(volm2geom[entityTag]);
-                    VE_prism.part_tag.push_back(volm2part[entityTag] - one);
-                } else {
-                    VE_prism.geom_tag.push_back(entityTag);
-                }
-                break;
-            case 15:
-                numE15 = numE15 + 1;
-                PE.Etype.push_back(elementType);
-                PE.EToV.push_back(line_data[1] - one);
-                PE.phys_tag.push_back(point2phys[entityTag]);
-                if (not(single_domain)) {
-                    PE.geom_tag.push_back(point2geom[entityTag]);
-                    PE.part_tag.push_back(point2part[entityTag] - one);
-                } else {
-                    PE.geom_tag.push_back(entityTag);
-                }
-                break;
-            default:
-                throw std::runtime_error("Element type not in list");
-            }
-        }
-    }
 
-    if (numTotalElem != (numE15 + numE1 + numE2 + numE3 + numE4 + numE5 + numE6)) {
-        throw std::runtime_error("Total number of elements mismatch");
+            int phys_tag = 0;
+            int geom_tag = 0;
+            int part_tag = 0;
+            detail::resolve_v4_entity_tags(
+                entity_kind,
+                entityTag,
+                single_domain,
+                point2phys,
+                point2geom,
+                point2part,
+                curve2phys,
+                curve2geom,
+                curve2part,
+                surf2phys,
+                surf2geom,
+                surf2part,
+                volm2phys,
+                volm2geom,
+                volm2part,
+                phys_tag,
+                geom_tag,
+                part_tag);
+
+            ++(*counter);
+            assign_v4_element(
+                *block,
+                elementType,
+                line_data,
+                phys_tag,
+                geom_tag,
+                part_tag,
+                single_domain,
+                one);
+        }
     }
 
     GmshMesh mesh;
@@ -398,6 +376,8 @@ inline GmshMesh parse_gmsh_v4(const std::string& mesh_file, ParseOptions opts = 
     mesh.info.num_nodes = numNodes;
     mesh.info.single_domain = single_domain;
     mesh.info.num_partitions = numPartitions;
+
+    validate_and_set_element_order(numTotalElem, counters, mesh.info, debug);
 
     return mesh;
 }

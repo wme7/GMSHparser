@@ -1,8 +1,10 @@
 #ifndef GMSH_PARSE_V2_HPP
 #define GMSH_PARSE_V2_HPP
 
+#include "ElementTypes.hpp"
 #include "Globals.hpp"
 #include "GMSHparserTools.hpp"
+#include "ParseHelpers.hpp"
 #include "Types.hpp"
 
 namespace gmshparser {
@@ -108,167 +110,34 @@ inline GmshMesh parse_gmsh_v2(const std::string& mesh_file, ParseOptions opts = 
     ElementBlock VE_hex;
     ElementBlock VE_prism;
 
-    size_t numE1 = 0;
-    size_t numE2 = 0;
-    size_t numE3 = 0;
-    size_t numE4 = 0;
-    size_t numE5 = 0;
-    size_t numE6 = 0;
-    size_t numE15 = 0;
+    ElementBlocks blocks{PE, LE, SE_tri, SE_quad, VE_tet, VE_hex, VE_prism};
+    ElementCounters counters;
 
     for (size_t i = 0; i < numTotalElem; i++) {
         std::getline(buffer_E, line);
         auto n = str2size_t(line);
-        size_t elementType = n[1];
-        size_t numberOfTags = n[2];
-        switch (elementType) {
-        case 1:
-            numE1 = numE1 + 1;
-            LE.Etype.push_back(elementType);
-            LE.EToV.push_back(n[2 + numberOfTags + 1] - one);
-            LE.EToV.push_back(n[2 + numberOfTags + 2] - one);
-            if (numberOfTags > 0) {
-                auto tags = extractVectorBetween(n, 3, 3 + numberOfTags);
-                if (tags.size() >= 1) {
-                    LE.phys_tag.push_back(tags[0]);
-                    if (tags.size() >= 2) {
-                        LE.geom_tag.push_back(tags[1]);
-                        if (tags.size() >= 4) {
-                            LE.part_tag.push_back(tags[3] - one);
-                        }
-                    }
-                }
-            }
-            break;
-        case 2:
-            numE2 = numE2 + 1;
-            SE_tri.Etype.push_back(elementType);
-            SE_tri.EToV.push_back(n[2 + numberOfTags + 1] - one);
-            SE_tri.EToV.push_back(n[2 + numberOfTags + 2] - one);
-            SE_tri.EToV.push_back(n[2 + numberOfTags + 3] - one);
-            if (numberOfTags > 0) {
-                auto tags = extractVectorBetween(n, 3, 3 + numberOfTags);
-                if (tags.size() >= 1) {
-                    SE_tri.phys_tag.push_back(tags[0]);
-                    if (tags.size() >= 2) {
-                        SE_tri.geom_tag.push_back(tags[1]);
-                        if (tags.size() >= 4) {
-                            SE_tri.part_tag.push_back(tags[3] - one);
-                        }
-                    }
-                }
-            }
-            break;
-        case 3:
-            numE3 = numE3 + 1;
-            SE_quad.Etype.push_back(elementType);
-            SE_quad.EToV.push_back(n[2 + numberOfTags + 1] - one);
-            SE_quad.EToV.push_back(n[2 + numberOfTags + 2] - one);
-            SE_quad.EToV.push_back(n[2 + numberOfTags + 3] - one);
-            SE_quad.EToV.push_back(n[2 + numberOfTags + 4] - one);
-            if (numberOfTags > 0) {
-                auto tags = extractVectorBetween(n, 3, 3 + numberOfTags);
-                if (tags.size() >= 1) {
-                    SE_quad.phys_tag.push_back(tags[0]);
-                    if (tags.size() >= 2) {
-                        SE_quad.geom_tag.push_back(tags[1]);
-                        if (tags.size() >= 4) {
-                            SE_quad.part_tag.push_back(tags[3] - one);
-                        }
-                    }
-                }
-            }
-            break;
-        case 4:
-            numE4 = numE4 + 1;
-            VE_tet.Etype.push_back(elementType);
-            VE_tet.EToV.push_back(n[2 + numberOfTags + 1] - one);
-            VE_tet.EToV.push_back(n[2 + numberOfTags + 2] - one);
-            VE_tet.EToV.push_back(n[2 + numberOfTags + 3] - one);
-            VE_tet.EToV.push_back(n[2 + numberOfTags + 4] - one);
-            if (numberOfTags > 0) {
-                auto tags = extractVectorBetween(n, 3, 3 + numberOfTags);
-                if (tags.size() >= 1) {
-                    VE_tet.phys_tag.push_back(tags[0]);
-                    if (tags.size() >= 2) {
-                        VE_tet.geom_tag.push_back(tags[1]);
-                        if (tags.size() >= 4) {
-                            VE_tet.part_tag.push_back(tags[3] - one);
-                        }
-                    }
-                }
-            }
-            break;
-        case 5:
-            numE5 = numE5 + 1;
-            VE_hex.Etype.push_back(elementType);
-            VE_hex.EToV.push_back(n[2 + numberOfTags + 1] - one);
-            VE_hex.EToV.push_back(n[2 + numberOfTags + 2] - one);
-            VE_hex.EToV.push_back(n[2 + numberOfTags + 3] - one);
-            VE_hex.EToV.push_back(n[2 + numberOfTags + 4] - one);
-            VE_hex.EToV.push_back(n[2 + numberOfTags + 5] - one);
-            VE_hex.EToV.push_back(n[2 + numberOfTags + 6] - one);
-            VE_hex.EToV.push_back(n[2 + numberOfTags + 7] - one);
-            VE_hex.EToV.push_back(n[2 + numberOfTags + 8] - one);
-            if (numberOfTags > 0) {
-                auto tags = extractVectorBetween(n, 3, 3 + numberOfTags);
-                if (tags.size() >= 1) {
-                    VE_hex.phys_tag.push_back(tags[0]);
-                    if (tags.size() >= 2) {
-                        VE_hex.geom_tag.push_back(tags[1]);
-                        if (tags.size() >= 4) {
-                            VE_hex.part_tag.push_back(tags[3] - one);
-                        }
-                    }
-                }
-            }
-            break;
-        case 6:
-            numE6 = numE6 + 1;
-            VE_prism.Etype.push_back(elementType);
-            VE_prism.EToV.push_back(n[2 + numberOfTags + 1] - one);
-            VE_prism.EToV.push_back(n[2 + numberOfTags + 2] - one);
-            VE_prism.EToV.push_back(n[2 + numberOfTags + 3] - one);
-            VE_prism.EToV.push_back(n[2 + numberOfTags + 4] - one);
-            VE_prism.EToV.push_back(n[2 + numberOfTags + 5] - one);
-            VE_prism.EToV.push_back(n[2 + numberOfTags + 6] - one);
-            if (numberOfTags > 0) {
-                auto tags = extractVectorBetween(n, 3, 3 + numberOfTags);
-                if (tags.size() >= 1) {
-                    VE_prism.phys_tag.push_back(tags[0]);
-                    if (tags.size() >= 2) {
-                        VE_prism.geom_tag.push_back(tags[1]);
-                        if (tags.size() >= 4) {
-                            VE_prism.part_tag.push_back(tags[3] - one);
-                        }
-                    }
-                }
-            }
-            break;
-        case 15:
-            numE15 = numE15 + 1;
-            PE.Etype.push_back(elementType);
-            PE.EToV.push_back(n[2 + numberOfTags + 1] - one);
-            if (numberOfTags > 0) {
-                auto tags = extractVectorBetween(n, 3, 3 + numberOfTags);
-                if (tags.size() >= 1) {
-                    PE.phys_tag.push_back(tags[0]);
-                    if (tags.size() >= 2) {
-                        PE.geom_tag.push_back(tags[1]);
-                        if (tags.size() >= 4) {
-                            PE.part_tag.push_back(tags[3] - one);
-                        }
-                    }
-                }
-            }
-            break;
-        default:
+        if (n.size() < 3) {
+            throw std::runtime_error("Malformed element line");
+        }
+
+        const size_t elementType = n[1];
+        const size_t numberOfTags = n[2];
+
+        if (!is_supported_element_type(elementType)) {
             throw std::runtime_error("Element type not in list");
         }
-    }
 
-    if (numTotalElem != (numE15 + numE1 + numE2 + numE3 + numE4 + numE5 + numE6)) {
-        throw std::runtime_error("Total number of elements mismatch");
+        ElementBlock* block = block_for_gmsh_type(elementType, blocks);
+        size_t* counter = counter_for_gmsh_type(elementType, counters);
+        if (block == nullptr || counter == nullptr) {
+            throw std::runtime_error("Element type not in list");
+        }
+
+        ++(*counter);
+        append_v2_element(*block, elementType, n, numberOfTags, one);
+        if (numberOfTags > 0) {
+            assign_v2_tags(*block, extractVectorBetween(n, 3, 3 + numberOfTags), one);
+        }
     }
 
     GmshMesh mesh;
@@ -286,6 +155,8 @@ inline GmshMesh parse_gmsh_v2(const std::string& mesh_file, ParseOptions opts = 
     mesh.info.endian = size;
     mesh.info.phys_DIM = phys_DIM;
     mesh.info.num_nodes = numNodes;
+
+    validate_and_set_element_order(numTotalElem, counters, mesh.info, debug);
 
     size_t num_partitions = 1;
     size_t max_part_tag = 0;

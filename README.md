@@ -8,7 +8,19 @@ The project provides:
 - a **Python 3 package** (`gmshparser`) built with pybind11
 - **Matlab reference implementations** under `Matlab/`
 
-Supported element types: point (15), line (1), triangle (2), quadrilateral (3), tetrahedron (4), hexahedron (5), and prism (6). Binary meshes are rejected.
+Supported element types (ASCII only; binary meshes are rejected):
+
+| Geometry | Gmsh type IDs | Nodes (P1 / P2 / P3) |
+|----------|---------------|----------------------|
+| Point | 15 | 1 |
+| Line | 1, 8, 26 | 2 / 3 / 4 |
+| Triangle | 2, 9, 21 | 3 / 6 / 10 |
+| Quadrilateral | 3, 10, 36 | 4 / 9 / 16 |
+| Tetrahedron | 4, 11, 29 | 4 / 10 / 20 |
+| Hexahedron | 5, 12, 92 | 8 / 27 / 64 |
+| Prism | 6, 13, 90 | 6 / 18 / 40 |
+
+High-order elements share the same output buckets as linear ones (`LE`, `SE_tri`, …). Per-element Gmsh type IDs are stored in `Etype`; `info.element_order` reports the global mesh order (1, 2, or 3). Gmsh uses a single polynomial order per mesh — mixed-order files are not supported.
 
 ![](./Matlab/figures/ScreenCapture.png)
 
@@ -36,6 +48,8 @@ Remove generated mesh files:
 ```bash
 bash meshes/clean_meshes.sh
 ```
+
+The `sector_*` geometries produce curved P1/P2/P3 test meshes (2D and extruded 3D). See notes in `meshes/build_meshes.sh` about experimental P3 prism meshes.
 
 ## C++ usage
 
@@ -123,7 +137,7 @@ import gmshparser
 
 mesh = gmshparser.parse("meshes/square_tri_v2.msh")   # auto-detect v2.2 / v4.1
 mesh = gmshparser.parse_v2("meshes/square_tri_v2.msh")
-mesh = gmshparser.parse_v4("meshes/box_v4.msh")
+mesh = gmshparser.parse_v4("meshes/simple_box_v4.msh")
 
 # Matlab-compatible indexing (1-based GMSH tags):
 mesh = gmshparser.parse_v2("meshes/square_tri_v2.msh", one=0)
@@ -138,6 +152,9 @@ print(mesh.V.shape)
 print(mesh.SE_tri.EToV)
 print(mesh.physical_names)
 print(mesh.info.version)
+print(mesh.info.element_order)
+print(mesh.SE_tri.nodes_per_element)
+print(mesh.SE_tri.EToV.shape)
 ```
 
 `gmshparser.as_dict(mesh)` returns a flat dictionary of NumPy arrays using the legacy key names (`SE_tri_EToV`, `VE_tet_phys_tag`, …).
@@ -148,15 +165,16 @@ Text summary of mesh contents (nodes, physical groups, element counts):
 
 ```bash
 uv run python examples/summarize_mesh.py meshes/square_tri_v2.msh
-uv run python examples/summarize_mesh.py meshes/box_v4.msh
+uv run python examples/summarize_mesh.py meshes/simple_box_v4.msh
+uv run python examples/summarize_mesh.py meshes/sector_mixed_p2_v2.msh
 ```
 
 Visualization with matplotlib (`uv sync --extra plot` if needed):
 
 ```bash
 uv run python examples/plot_mesh.py meshes/square_tri_v2.msh --lines
-uv run python examples/plot_mesh.py meshes/box_v4.msh
-uv run python examples/plot_mesh.py meshes/box_v4.msh --volume
+uv run python examples/plot_mesh.py meshes/simple_box_v4.msh
+uv run python examples/plot_mesh.py meshes/simple_box_v4.msh --volume
 ```
 
 ### Run tests
@@ -165,7 +183,7 @@ uv run python examples/plot_mesh.py meshes/box_v4.msh --volume
 uv run pytest
 ```
 
-Reference data live in `tests/reference/`. They are exported from Matlab (`Matlab/export_test_references.m`) and compared with `one=0`. The Python default `one=1` is for 0-based C/Python indexing.
+Reference data live in `tests/reference/` (28 meshes: square/simple fixtures plus `sector_*` HO cases). They are exported from Matlab (`Matlab/export_test_references.m`) and compared with `one=0`. The Python default `one=1` is for 0-based C/Python indexing.
 
 ```matlab
 cd Matlab

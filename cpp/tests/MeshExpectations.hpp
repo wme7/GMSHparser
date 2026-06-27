@@ -11,6 +11,7 @@ struct MeshExpectation {
     double version;
     std::size_t nodes;
     std::size_t phys_dim;
+    std::size_t element_order;
     std::size_t pe;
     std::size_t le;
     std::size_t tri;
@@ -21,25 +22,37 @@ struct MeshExpectation {
 };
 
 inline constexpr MeshExpectation kV2Expectations[] = {
-    {"square_tri_v2.msh", 2.2, 142, 2, 0, 40, 242, 0, 0, 0, 0},
-    {"square_quad_v2.msh", 2.2, 121, 2, 0, 40, 0, 100, 0, 0, 0},
-    {"square_mixed_v2.msh", 2.2, 192, 2, 0, 60, 132, 100, 0, 0, 0},
-    {"square_extruded_prism_v2.msh", 2.2, 2565, 3, 0, 0, 1888, 320, 0, 0, 3776},
-    {"square_extruded_hex_v2.msh", 2.2, 2205, 3, 0, 0, 0, 1120, 0, 1600, 0},
-    {"square_extruded_mixed_v2.msh", 2.2, 2415, 3, 0, 0, 968, 880, 0, 800, 1936},
-    {"simple_rectangle_v2.msh", 2.2, 92, 2, 0, 32, 150, 0, 0, 0, 0},
-    {"simple_box_v2.msh", 2.2, 121, 3, 0, 0, 220, 0, 328, 0, 0},
+    {"square_tri_v2.msh", 2.2, 142, 2, 1, 0, 40, 242, 0, 0, 0, 0},
+    {"square_quad_v2.msh", 2.2, 121, 2, 1, 0, 40, 0, 100, 0, 0, 0},
+    {"square_mixed_v2.msh", 2.2, 192, 2, 1, 0, 60, 132, 100, 0, 0, 0},
+    {"square_extruded_prism_v2.msh", 2.2, 2565, 3, 1, 0, 0, 1888, 320, 0, 0, 3776},
+    {"square_extruded_hex_v2.msh", 2.2, 2205, 3, 1, 0, 0, 0, 1120, 0, 1600, 0},
+    {"square_extruded_mixed_v2.msh", 2.2, 2415, 3, 1, 0, 0, 968, 880, 0, 800, 1936},
+    {"simple_rectangle_v2.msh", 2.2, 92, 2, 1, 0, 32, 150, 0, 0, 0, 0},
+    {"simple_box_v2.msh", 2.2, 121, 3, 1, 0, 0, 220, 0, 328, 0, 0},
+    {"sector_mixed_p1_v2.msh", 2.2, 441, 2, 1, 0, 80, 400, 200, 0, 0, 0},
+    {"sector_mixed_p2_v2.msh", 2.2, 1681, 2, 2, 0, 80, 400, 200, 0, 0, 0},
+    {"sector_mixed_p3_v2.msh", 2.2, 3721, 2, 3, 0, 80, 400, 200, 0, 0, 0},
+    {"sector_extruded_mixed_p1_v2.msh", 2.2, 2205, 3, 1, 0, 0, 800, 880, 0, 800, 1600},
+    {"sector_extruded_mixed_p2_v2.msh", 2.2, 15129, 3, 2, 0, 0, 800, 880, 0, 800, 1600},
+    {"sector_extruded_mixed_p3_v2.msh", 2.2, 48373, 3, 3, 0, 0, 800, 880, 0, 800, 1600},
 };
 
 inline constexpr MeshExpectation kV4Expectations[] = {
-    {"square_tri_v4.msh", 4.1, 142, 2, 0, 40, 242, 0, 0, 0, 0},
-    {"square_quad_v4.msh", 4.1, 121, 2, 0, 40, 0, 100, 0, 0, 0},
-    {"square_mixed_v4.msh", 4.1, 192, 2, 0, 60, 132, 100, 0, 0, 0},
-    {"square_extruded_prism_v4.msh", 4.1, 2565, 3, 0, 0, 1888, 320, 0, 0, 3776},
-    {"square_extruded_hex_v4.msh", 4.1, 2205, 3, 0, 0, 0, 1120, 0, 1600, 0},
-    {"square_extruded_mixed_v4.msh", 4.1, 2415, 3, 0, 0, 968, 800, 0, 800, 1936},
-    {"simple_rectangle_v4.msh", 4.1, 92, 2, 0, 32, 150, 0, 0, 0, 0},
-    {"simple_box_v4.msh", 4.1, 121, 3, 0, 0, 220, 0, 328, 0, 0},
+    {"square_tri_v4.msh", 4.1, 142, 2, 1, 0, 40, 242, 0, 0, 0, 0},
+    {"square_quad_v4.msh", 4.1, 121, 2, 1, 0, 40, 0, 100, 0, 0, 0},
+    {"square_mixed_v4.msh", 4.1, 192, 2, 1, 0, 60, 132, 100, 0, 0, 0},
+    {"square_extruded_prism_v4.msh", 4.1, 2565, 3, 1, 0, 0, 1888, 320, 0, 0, 3776},
+    {"square_extruded_hex_v4.msh", 4.1, 2205, 3, 1, 0, 0, 0, 1120, 0, 1600, 0},
+    {"square_extruded_mixed_v4.msh", 4.1, 2415, 3, 1, 0, 0, 968, 800, 0, 800, 1936},
+    {"simple_rectangle_v4.msh", 4.1, 92, 2, 1, 0, 32, 150, 0, 0, 0, 0},
+    {"simple_box_v4.msh", 4.1, 121, 3, 1, 0, 0, 220, 0, 328, 0, 0},
+    {"sector_mixed_p1_v4.msh", 4.1, 441, 2, 1, 0, 80, 400, 200, 0, 0, 0},
+    {"sector_mixed_p2_v4.msh", 4.1, 1681, 2, 2, 0, 80, 400, 200, 0, 0, 0},
+    {"sector_mixed_p3_v4.msh", 4.1, 3721, 2, 3, 0, 80, 400, 200, 0, 0, 0},
+    {"sector_extruded_mixed_p1_v4.msh", 4.1, 2205, 3, 1, 0, 0, 800, 800, 0, 800, 1600},
+    {"sector_extruded_mixed_p2_v4.msh", 4.1, 15129, 3, 2, 0, 0, 800, 800, 0, 800, 1600},
+    {"sector_extruded_mixed_p3_v4.msh", 4.1, 48373, 3, 3, 0, 0, 800, 800, 0, 800, 1600},
 };
 
 inline void assert_mesh_expectation(const gmshparser::GmshMesh& mesh, const MeshExpectation& expected)
@@ -47,6 +60,7 @@ inline void assert_mesh_expectation(const gmshparser::GmshMesh& mesh, const Mesh
     assert(mesh.info.version == expected.version);
     assert(mesh.info.num_nodes == expected.nodes);
     assert(mesh.info.phys_DIM == expected.phys_dim);
+    assert(mesh.info.element_order == expected.element_order);
     assert(mesh.PE.num_elements() == expected.pe);
     assert(mesh.LE.num_elements() == expected.le);
     assert(mesh.SE_tri.num_elements() == expected.tri);

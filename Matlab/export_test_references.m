@@ -18,19 +18,31 @@ function export_test_references()
         'square_tri_v2.msh',      @GMSHparserV2;
         'square_quad_v2.msh',     @GMSHparserV2;
         'square_mixed_v2.msh',    @GMSHparserV2;
-        'extruded_prism_v2.msh',  @GMSHparserV2;
-        'extruded_hex_v2.msh',    @GMSHparserV2;
-        'extruded_mixed_v2.msh',  @GMSHparserV2;
-        'rectangle_v2.msh',       @GMSHparserV2;
-        'box_v2.msh',             @GMSHparserV2;
+        'square_extruded_prism_v2.msh',  @GMSHparserV2;
+        'square_extruded_hex_v2.msh',    @GMSHparserV2;
+        'square_extruded_mixed_v2.msh',  @GMSHparserV2;
+        'simple_rectangle_v2.msh',       @GMSHparserV2;
+        'simple_box_v2.msh',             @GMSHparserV2;
+        'sector_mixed_p1_v2.msh', @GMSHparserV2;
+        'sector_mixed_p2_v2.msh', @GMSHparserV2;
+        'sector_mixed_p3_v2.msh', @GMSHparserV2;
+        'sector_extruded_mixed_p1_v2.msh', @GMSHparserV2;
+        'sector_extruded_mixed_p2_v2.msh', @GMSHparserV2;
+        'sector_extruded_mixed_p3_v2.msh', @GMSHparserV2;
         'square_tri_v4.msh',      @GMSHparserV4;
         'square_quad_v4.msh',     @GMSHparserV4;
         'square_mixed_v4.msh',    @GMSHparserV4;
-        'extruded_prism_v4.msh',  @GMSHparserV4;
-        'extruded_hex_v4.msh',    @GMSHparserV4;
-        'extruded_mixed_v4.msh',  @GMSHparserV4;
-        'rectangle_v4.msh',       @GMSHparserV4;
-        'box_v4.msh',             @GMSHparserV4;
+        'square_extruded_prism_v4.msh',  @GMSHparserV4;
+        'square_extruded_hex_v4.msh',    @GMSHparserV4;
+        'square_extruded_mixed_v4.msh',  @GMSHparserV4;
+        'simple_rectangle_v4.msh',       @GMSHparserV4;
+        'simple_box_v4.msh',             @GMSHparserV4;
+        'sector_mixed_p1_v4.msh', @GMSHparserV4;
+        'sector_mixed_p2_v4.msh', @GMSHparserV4;
+        'sector_mixed_p3_v4.msh', @GMSHparserV4;
+        'sector_extruded_mixed_p1_v4.msh', @GMSHparserV4;
+        'sector_extruded_mixed_p2_v4.msh', @GMSHparserV4;
+        'sector_extruded_mixed_p3_v4.msh', @GMSHparserV4;
     };
 
     for i = 1:size(meshes, 1)
@@ -47,8 +59,8 @@ end
 
 function data = matlab_mesh_to_reference(V, VE, SE, LE, PE, mapPhysNames, info)
     data.V = pad_vertices(V, info.Dim);
-    data = append_block(data, 'PE', PE, 1);
-    data = append_block(data, 'LE', LE, 2);
+    data = append_block(data, 'PE', PE.pnt, 1);
+    data = append_block(data, 'LE', LE.lin, 2);
     data = append_block(data, 'SE_tri', SE.tri, 3);
     data = append_block(data, 'SE_quad', SE.quad, 4);
     data = append_block(data, 'VE_tet', VE.tet, 4);
@@ -62,6 +74,7 @@ function data = matlab_mesh_to_reference(V, VE, SE, LE, PE, mapPhysNames, info)
     data.info_num_nodes = size(V, 1);
     data.info_single_domain = double(info.numPartitions <= 1);
     data.info_num_partitions = info.numPartitions;
+    data.info_element_order = info.element_order;
 
     tags = cell2mat(keys(mapPhysNames));
     names = values(mapPhysNames);

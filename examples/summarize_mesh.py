@@ -58,7 +58,7 @@ def print_header(mesh_path: Path, mesh: Mesh) -> None:
     info = mesh.info
     encoding = "ASCII" if info.format == 0 else "binary"
     print(f"Mesh: {mesh_path}")
-    print(f"  Gmsh v{info.version}, {encoding}, {info.phys_DIM}D")
+    print(f"  Gmsh v{info.version}, {encoding}, {info.phys_DIM}D, order {info.element_order}")
     print(f"  Nodes: {info.num_nodes}")
     print(f"  Bounding box: {format_bbox(mesh)}")
 
@@ -89,7 +89,9 @@ def print_element_inventory(mesh: Mesh) -> None:
         return
     print("\nElements:")
     for label, block in present:
-        print(f"  {label:10s}  {block.num_elements:6d}")
+        nodes = block.nodes_per_element if block.num_elements > 0 else 0
+        suffix = f"  ({nodes} nodes/elem)" if nodes else ""
+        print(f"  {label:10s}  {block.num_elements:6d}{suffix}")
 
 
 def print_counts_by_physical_group(mesh: Mesh) -> None:

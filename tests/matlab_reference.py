@@ -54,6 +54,7 @@ def mesh_to_reference_dict(mesh: Mesh) -> dict[str, NDArray[Any]]:
     data["info_num_nodes"] = np.array([mesh.info.num_nodes])
     data["info_single_domain"] = np.array([float(mesh.info.single_domain)])
     data["info_num_partitions"] = np.array([mesh.info.num_partitions])
+    data["info_element_order"] = np.array([mesh.info.element_order])
     tags = np.array(sorted(mesh.physical_names), dtype=np.int64)
     names = np.array([mesh.physical_names[tag] for tag in tags])
     data["physical_name_tags"] = tags

@@ -23,7 +23,7 @@ if(GMSHPARSER_BUILD_TESTS)
   set(GMSHPARSER_MESH_DIR "${_GMSHPARSER_DEFAULT_MESH_DIR}" CACHE PATH
       "Directory containing test .msh files")
 
-  foreach(test_target IN ITEMS TestGMSHparserV2 TestGMSHparserV4)
+  foreach(test_target IN ITEMS TestGMSHparserV2 TestGMSHparserV4 TestElementTypes)
     add_executable(${test_target} tests/${test_target}.cpp)
     target_include_directories(${test_target} PRIVATE tests)
     target_link_libraries(${test_target} PRIVATE GMSHparser::GMSHparser)

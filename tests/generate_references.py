@@ -27,9 +27,9 @@ def main() -> None:
 
     for mesh_path in sorted(MESH_DIR.glob("*.msh")):
         if mesh_path.name.endswith("_v2.msh"):
-            mesh = gmshparser.parse_v2(mesh_path)
+            mesh = gmshparser.parse_v2(mesh_path, one=0)
         elif mesh_path.name.endswith("_v4.msh"):
-            mesh = gmshparser.parse_v4(mesh_path)
+            mesh = gmshparser.parse_v4(mesh_path, one=0)
         else:
             continue
 

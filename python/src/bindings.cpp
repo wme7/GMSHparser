@@ -10,6 +10,7 @@
 #include <string>
 #include <vector>
 
+#include <gmshparser/ElementTypes.hpp>
 #include <gmshparser/ParseV2.hpp>
 #include <gmshparser/ParseV4.hpp>
 
@@ -68,13 +69,15 @@ struct PyElementBlock {
     py::array_t<std::int32_t> part_tag;
     py::array_t<std::int32_t> etype;
     std::size_t num_elements = 0;
+    std::size_t nodes_per_element = 0;
 };
 
-PyElementBlock element_block_to_python(const gmshparser::ElementBlock& block, size_t nodes_per_elem)
+PyElementBlock element_block_to_python(const gmshparser::ElementBlock& block)
 {
     PyElementBlock out;
     out.num_elements = block.num_elements();
-    out.etov = etov_to_2d(block.EToV, out.num_elements, nodes_per_elem);
+    out.nodes_per_element = gmshparser::nodes_per_element(block);
+    out.etov = etov_to_2d(block.EToV, out.num_elements, out.nodes_per_element);
     out.phys_tag = vector_to_1d<std::int32_t>(block.phys_tag);
     out.geom_tag = vector_to_1d<std::int32_t>(block.geom_tag);
     out.part_tag = vector_to_1d<std::int32_t>(block.part_tag);
@@ -99,13 +102,13 @@ PyMesh mesh_to_python(const gmshparser::GmshMesh& mesh)
 {
     PyMesh out;
     out.V = vertices_to_numpy(mesh.V);
-    out.PE = element_block_to_python(mesh.PE, 1);
-    out.LE = element_block_to_python(mesh.LE, 2);
-    out.SE_tri = element_block_to_python(mesh.SE_tri, 3);
-    out.SE_quad = element_block_to_python(mesh.SE_quad, 4);
-    out.VE_tet = element_block_to_python(mesh.VE_tet, 4);
-    out.VE_hex = element_block_to_python(mesh.VE_hex, 8);
-    out.VE_prism = element_block_to_python(mesh.VE_prism, 6);
+    out.PE = element_block_to_python(mesh.PE);
+    out.LE = element_block_to_python(mesh.LE);
+    out.SE_tri = element_block_to_python(mesh.SE_tri);
+    out.SE_quad = element_block_to_python(mesh.SE_quad);
+    out.VE_tet = element_block_to_python(mesh.VE_tet);
+    out.VE_hex = element_block_to_python(mesh.VE_hex);
+    out.VE_prism = element_block_to_python(mesh.VE_prism);
     out.physical_names = mesh.phys_names;
     out.info = mesh.info;
     return out;
@@ -172,7 +175,8 @@ void bind_element_block(py::module& m, const char* name)
         .def_readonly("geom_tag", &PyElementBlock::geom_tag)
         .def_readonly("part_tag", &PyElementBlock::part_tag)
         .def_readonly("Etype", &PyElementBlock::etype)
-        .def_readonly("num_elements", &PyElementBlock::num_elements);
+        .def_readonly("num_elements", &PyElementBlock::num_elements)
+        .def_readonly("nodes_per_element", &PyElementBlock::nodes_per_element);
 }
 
 } // namespace
@@ -188,7 +192,8 @@ PYBIND11_MODULE(_gmshparser, m)
         .def_readonly("phys_DIM", &gmshparser::MeshInfo::phys_DIM)
         .def_readonly("num_nodes", &gmshparser::MeshInfo::num_nodes)
         .def_readonly("single_domain", &gmshparser::MeshInfo::single_domain)
-        .def_readonly("num_partitions", &gmshparser::MeshInfo::num_partitions);
+        .def_readonly("num_partitions", &gmshparser::MeshInfo::num_partitions)
+        .def_readonly("element_order", &gmshparser::MeshInfo::element_order);
 
     py::class_<gmshparser::ParseOptions>(m, "ParseOptions")
         .def(py::init<>())

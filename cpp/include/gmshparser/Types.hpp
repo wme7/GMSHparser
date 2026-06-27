@@ -37,6 +37,7 @@ struct MeshInfo {
     size_t num_nodes = 0;
     bool single_domain = true;
     size_t num_partitions = 0;
+    size_t element_order = 0; // 0: points only; 1/2/3: global mesh polynomial order
 };
 
 struct GmshMesh {

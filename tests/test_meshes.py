@@ -6,20 +6,23 @@ import gmshparser
 import numpy as np
 import pytest
 
-from conftest import MESH_DIR, REFERENCE_DIR, mesh_stems
+from conftest import MESH_DIR, REFERENCE_DIR, mesh_stems, reference_mesh_paths
 from matlab_reference import compare_mesh_to_reference, load_reference
+
+# v4.1 can represent some extruded quad layers with a different face split than v2.2.
+V2_V4_QUAD_COUNT_MISMATCH_STEMS = frozenset({
+    "square_extruded_mixed",
+    "sector_extruded_mixed_p1",
+    "sector_extruded_mixed_p2",
+    "sector_extruded_mixed_p3",
+})
 
 MESH_PATHS = sorted(MESH_DIR.glob("*.msh"))
 
 
-@pytest.mark.parametrize("mesh_path", MESH_PATHS, ids=lambda p: p.name)
+@pytest.mark.parametrize("mesh_path", reference_mesh_paths(), ids=lambda p: p.name)
 def test_parse_matches_matlab_reference(mesh_path: Path) -> None:
     reference_path = REFERENCE_DIR / mesh_path.name.replace(".msh", ".mat")
-    assert reference_path.exists(), (
-        f"Missing reference file {reference_path.name}. "
-        "Run Matlab/export_test_references.m from the Matlab/ directory."
-    )
-
     if mesh_path.name.endswith("_v2.msh"):
         mesh = gmshparser.parse_v2(mesh_path, one=0)
     else:
@@ -86,6 +89,7 @@ def test_v2_v4_geometry_consistency(stem: str, mesh_dir: Path) -> None:
 
     assert mesh_v2.info.num_nodes == mesh_v4.info.num_nodes
     assert mesh_v2.info.phys_DIM == mesh_v4.info.phys_DIM
+    assert mesh_v2.info.element_order == mesh_v4.info.element_order
     assert mesh_v2.PE.num_elements == mesh_v4.PE.num_elements
     assert mesh_v2.LE.num_elements == mesh_v4.LE.num_elements
     assert mesh_v2.SE_tri.num_elements == mesh_v4.SE_tri.num_elements
@@ -93,8 +97,49 @@ def test_v2_v4_geometry_consistency(stem: str, mesh_dir: Path) -> None:
     assert mesh_v2.VE_hex.num_elements == mesh_v4.VE_hex.num_elements
     assert mesh_v2.VE_prism.num_elements == mesh_v4.VE_prism.num_elements
 
-    # v4.1 can split some quads differently for mixed extruded meshes.
-    if stem != "extruded_mixed":
+    if stem not in V2_V4_QUAD_COUNT_MISMATCH_STEMS:
         assert mesh_v2.SE_quad.num_elements == mesh_v4.SE_quad.num_elements
 
     assert mesh_v2.physical_names == mesh_v4.physical_names
+
+
+@pytest.mark.parametrize(
+    ("mesh_name", "order", "le_nodes", "tri_nodes", "hex_nodes", "prism_nodes"),
+    [
+        ("sector_mixed_p1_v2.msh", 1, 2, 3, 0, 0),
+        ("sector_mixed_p2_v2.msh", 2, 3, 6, 0, 0),
+        ("sector_mixed_p3_v2.msh", 3, 4, 10, 0, 0),
+        ("sector_extruded_mixed_p2_v2.msh", 2, 0, 6, 27, 18),
+        ("sector_extruded_mixed_p3_v2.msh", 3, 0, 10, 64, 40),
+        ("sector_mixed_p2_v4.msh", 2, 3, 6, 0, 0),
+        ("sector_extruded_mixed_p2_v4.msh", 2, 0, 6, 27, 18),
+    ],
+)
+def test_high_order_connectivity_shapes(
+    mesh_name: str,
+    order: int,
+    le_nodes: int,
+    tri_nodes: int,
+    hex_nodes: int,
+    prism_nodes: int,
+) -> None:
+    mesh_path = MESH_DIR / mesh_name
+    if mesh_name.endswith("_v2.msh"):
+        mesh = gmshparser.parse_v2(mesh_path)
+    else:
+        mesh = gmshparser.parse_v4(mesh_path)
+
+    assert mesh.info.element_order == order
+
+    if le_nodes:
+        assert mesh.LE.nodes_per_element == le_nodes
+        assert mesh.LE.EToV.shape == (mesh.LE.num_elements, le_nodes)
+    if tri_nodes:
+        assert mesh.SE_tri.nodes_per_element == tri_nodes
+        assert mesh.SE_tri.EToV.shape == (mesh.SE_tri.num_elements, tri_nodes)
+    if hex_nodes:
+        assert mesh.VE_hex.nodes_per_element == hex_nodes
+        assert mesh.VE_hex.EToV.shape == (mesh.VE_hex.num_elements, hex_nodes)
+    if prism_nodes:
+        assert mesh.VE_prism.nodes_per_element == prism_nodes
+        assert mesh.VE_prism.EToV.shape == (mesh.VE_prism.num_elements, prism_nodes)
