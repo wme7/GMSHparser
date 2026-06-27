@@ -10,8 +10,6 @@ from numpy.typing import NDArray
 
 from ._gmshparser import ElementBlock, Mesh, MeshElements, MeshInfo, ParseOptions
 from ._gmshparser import parse as _parse
-from ._gmshparser import parse_v2 as _parse_v2
-from ._gmshparser import parse_v4 as _parse_v4
 
 PathArg = Union[str, os.PathLike[str]]
 
@@ -26,8 +24,6 @@ __all__ = [
     "ParseOptions",
     "as_dict",
     "parse",
-    "parse_v2",
-    "parse_v4",
 ]
 
 __version__ = version("gmshparser")
@@ -49,28 +45,6 @@ def _resolve_options(
     opts.one = one
     opts.debug = debug
     return opts
-
-
-def parse_v2(
-    path: PathArg,
-    *,
-    one: int = 1,
-    debug: bool = False,
-    options: ParseOptions | None = None,
-) -> Mesh:
-    opts = _resolve_options(one=one, debug=debug, options=options)
-    return _parse_v2(_as_str(path), opts)
-
-
-def parse_v4(
-    path: PathArg,
-    *,
-    one: int = 1,
-    debug: bool = False,
-    options: ParseOptions | None = None,
-) -> Mesh:
-    opts = _resolve_options(one=one, debug=debug, options=options)
-    return _parse_v4(_as_str(path), opts)
 
 
 def parse(

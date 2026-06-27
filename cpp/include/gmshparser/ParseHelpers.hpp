@@ -7,7 +7,7 @@
 #include <vector>
 
 #include "ElementTypes.hpp"
-#include "GMSHparserTools.hpp"
+#include "ParseTools.hpp"
 #include "Types.hpp"
 
 namespace gmshparser {

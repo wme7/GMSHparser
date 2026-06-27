@@ -1,24 +1,15 @@
 #ifndef MULTI_DIMENSIONAL_ARRAY_HPP
 #define MULTI_DIMENSIONAL_ARRAY_HPP
 
-#include <vector>
-#include <iostream>
-#include <string>
-#include <fstream>
-#include <sstream>
 #include <cmath>
+#include <iostream>
+#include <vector>
 
 /*
  * Multidimensionnal Array in C++ 
- * 
- * Original code by RM 
- * Modifications by MD
- * 
- * T: typename (int/size_t/float/double)
- * D: number of dimensions
  */
 
-template<typename T, size_t D>
+template<typename T, size_t DIM>
 class MArray {
 
 protected:
@@ -31,7 +22,7 @@ protected:
 
 public:
     // Constructors & Destructor
-    MArray():m_data(nullptr), m_total_size(0), m_D(D), m_owned(false), m_allocated(false) {}
+    MArray():m_data(nullptr), m_total_size(0), m_D(DIM), m_owned(false), m_allocated(false) {}
     MArray(MArray const& Another)
     {
         //std::cout << "constructor by copy " << std::endl;
@@ -50,12 +41,12 @@ public:
     MArray(std::vector<size_t> const& dim)
     {
         //std::cout << "constructor by dim" << std::endl;
-        m_D = D;
+        m_D = DIM;
         m_total_size=1;
         for(size_t i=0; i<m_D; i++)
         {
-           m_total_size *= dim[i];
-           m_dims.push_back(dim[i]);
+            m_total_size *= dim[i];
+            m_dims.push_back(dim[i]);
         }
         m_data = new T[m_total_size];
         m_allocated = true;
@@ -64,7 +55,7 @@ public:
     MArray(std::vector<size_t> const& dim, T const val)
     {
         //std::cout << "constructor by dim with constant value" << std::endl;
-        m_D = D;
+        m_D = DIM;
         m_total_size=1;
         allocate(dim);
         for(size_t i=0;i<m_total_size;i++)
@@ -73,7 +64,7 @@ public:
     MArray(std::vector<size_t> const& dim, std::vector<T> const& vec)
     {
         //std::cout << "constructor by dim with vector array" << std::endl;
-        m_D = D;
+        m_D = DIM;
         m_total_size=1;
         for (auto element : dim){ m_total_size *= element;}
         if (m_total_size==vec.size()) {
@@ -138,8 +129,8 @@ public:
     T* data() const { return m_data; }
 };
 
-template<typename T, size_t D>
-void MArray<T,D>::allocate(std::vector<size_t> const &dims2)
+template<typename T, size_t DIM>
+void MArray<T,DIM>::allocate(std::vector<size_t> const &dims2)
 {
     m_dims = dims2;
     m_total_size = 1;
@@ -149,29 +140,29 @@ void MArray<T,D>::allocate(std::vector<size_t> const &dims2)
     m_owned = true;
 }
 
-template<typename T, size_t D>
-void MArray<T,D>::set_value(T val)
+template<typename T, size_t DIM>
+void MArray<T,DIM>::set_value(T val)
 {
     for (size_t i=0; i<m_total_size; i++) { m_data[i]=val; }
 }
 
-template<typename T, size_t D>
-void MArray<T,D>::print() const
+template<typename T, size_t DIM>
+void MArray<T,DIM>::print() const
 {
     if (m_allocated==1)
     {
         // Set print-out precision for 2D & 3D arrays
         std::cout.precision(4); // I need to check up to 8 decimals
 
-        std::cout<<D<<"Darray:\n"<<std::endl;
-        if(D==1)
+        std::cout<<DIM<<"Darray:\n"<<std::endl;
+        if(DIM==1)
         {
             // i-elements are printed as columns 
             for(size_t i=0; i<m_total_size; i++){
                 std::cout << m_data[i] << std::endl;
             }
         }
-        if(D==2 && m_dims.size()==2)
+        if(DIM==2 && m_dims.size()==2)
         {
             // i-elements are printed as columns 
             // j-elements are printed as rows
@@ -181,7 +172,7 @@ void MArray<T,D>::print() const
                 } std::cout << std::endl;
             } std::cout << std::endl;
         }
-        if(D==3 && m_dims.size()==3)
+        if(DIM==3 && m_dims.size()==3)
         {
             // i-elements are printed as columns 
             // j-elements are printed as rows
@@ -201,22 +192,22 @@ void MArray<T,D>::print() const
     }
 }
 
-template<typename T, size_t D>
-T MArray<T,D>::sum() const
+template<typename T, size_t DIM>
+T MArray<T,DIM>::sum() const
 {   T s=0;
     for (size_t i=0; i<m_total_size; i++) { s=s+m_data[i]; }
     return s;
 }
 
-template<typename T, size_t D>
-T MArray<T,D>::max() const 
+template<typename T, size_t DIM>
+T MArray<T,DIM>::max() const 
 {   T s=-1e10;
     for (size_t i=0; i<m_total_size; i++) { s=std::max(m_data[i],s); }
     return s;
 }
 
-template<typename T, size_t D>
-T MArray<T,D>::amax() const
+template<typename T, size_t DIM>
+T MArray<T,DIM>::amax() const
 {   T s=-1e10,s1;
     for (size_t i=0; i<m_total_size; i++) 
     {   s1 = std::abs(m_data[i]);
@@ -225,8 +216,8 @@ T MArray<T,D>::amax() const
     return s;
 }
 
-template<typename T, size_t D>
-T MArray<T,D>::min() const
+template<typename T, size_t DIM>
+T MArray<T,DIM>::min() const
 {   T s=1e10;
     for (size_t i=0; i<m_total_size; i++) { s=std::min(m_data[i],s); }
     return s;

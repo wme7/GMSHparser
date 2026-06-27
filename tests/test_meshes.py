@@ -32,22 +32,15 @@ MESH_PATHS = sorted(MESH_DIR.glob("*.msh"))
 @pytest.mark.parametrize("mesh_path", reference_mesh_paths(), ids=lambda p: p.name)
 def test_parse_matches_matlab_reference(mesh_path: Path) -> None:
     reference_path = REFERENCE_DIR / mesh_path.name.replace(".msh", ".mat")
-    if mesh_path.name.endswith("_v2.msh"):
-        mesh = gmshparser.parse_v2(mesh_path, one=0)
-    else:
-        mesh = gmshparser.parse_v4(mesh_path, one=0)
+    mesh = gmshparser.parse(mesh_path, one=0)
 
     compare_mesh_to_reference(mesh, load_reference(reference_path))
 
 
 @pytest.mark.parametrize("mesh_path", MESH_PATHS, ids=lambda p: p.name)
 def test_parse_default_one_is_zero_based(mesh_path: Path) -> None:
-    if mesh_path.name.endswith("_v2.msh"):
-        mesh_native = gmshparser.parse_v2(mesh_path)
-        mesh_gmsh = gmshparser.parse_v2(mesh_path, one=0)
-    else:
-        mesh_native = gmshparser.parse_v4(mesh_path)
-        mesh_gmsh = gmshparser.parse_v4(mesh_path, one=0)
+    mesh_native = gmshparser.parse(mesh_path)
+    mesh_gmsh = gmshparser.parse(mesh_path, one=0)
 
     for name in gmshparser.GEOMETRY_BLOCKS:
         native = getattr(mesh_native.El, name)
@@ -68,7 +61,7 @@ def test_parse_auto_detect(mesh_path: Path) -> None:
 
 def test_debug_prints(capfd: pytest.CaptureFixture[str]) -> None:
     mesh_path = MESH_DIR / "square_tri_v2.msh"
-    gmshparser.parse_v2(mesh_path, debug=True)
+    gmshparser.parse(mesh_path, debug=True)
     captured, _ = capfd.readouterr()
     assert "numNodes" in captured
 
@@ -78,15 +71,15 @@ def test_parse_options_struct() -> None:
     opts = gmshparser.ParseOptions()
     opts.one = 0
     opts.debug = False
-    mesh = gmshparser.parse_v2(mesh_path, options=opts)
+    mesh = gmshparser.parse(mesh_path, options=opts)
     reference = load_reference(REFERENCE_DIR / "square_tri_v2.mat")
     compare_mesh_to_reference(mesh, reference)
 
 
 @pytest.mark.parametrize("stem", mesh_stems(MESH_DIR))
 def test_v2_v4_geometry_consistency(stem: str, mesh_dir: Path) -> None:
-    mesh_v2 = gmshparser.parse_v2(mesh_dir / f"{stem}_v2.msh")
-    mesh_v4 = gmshparser.parse_v4(mesh_dir / f"{stem}_v4.msh")
+    mesh_v2 = gmshparser.parse(mesh_dir / f"{stem}_v2.msh")
+    mesh_v4 = gmshparser.parse(mesh_dir / f"{stem}_v4.msh")
 
     assert mesh_v2.info.num_nodes == mesh_v4.info.num_nodes
     assert mesh_v2.info.phys_DIM == mesh_v4.info.phys_DIM
@@ -122,11 +115,7 @@ def test_high_order_connectivity_shapes(
     prism_nodes: int,
 ) -> None:
     mesh_path = MESH_DIR / mesh_name
-    if mesh_name.endswith("_v2.msh"):
-        mesh = gmshparser.parse_v2(mesh_path)
-    else:
-        mesh = gmshparser.parse_v4(mesh_path)
-
+    mesh = gmshparser.parse(mesh_path)
     assert mesh.info.element_order == order
 
     if le_nodes:

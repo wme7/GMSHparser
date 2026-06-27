@@ -106,13 +106,6 @@ int main() {
 - `one` (default `1`): subtract from node/partition indices for 0-based C/Python use; set to `0` to preserve GMSH 1-based tags (Matlab convention).
 - `debug` (default `false`): print parser stage messages to stdout.
 
-Demo entry points that print element counts are also available:
-
-```cpp
-#include <gmshparser/GMSHparserV2.hpp>
-GMSHparserV2("mesh.msh");
-```
-
 ### Use in another CMake project
 
 In-tree:
@@ -157,17 +150,15 @@ uv pip install -e ".[dev]"
 import gmshparser
 
 mesh = gmshparser.parse("meshes/square_tri_v2.msh")   # auto-detect v2.2 / v4.1
-mesh = gmshparser.parse_v2("meshes/square_tri_v2.msh")
-mesh = gmshparser.parse_v4("meshes/simple_box_v4.msh")
 
 # Matlab-compatible indexing (1-based GMSH tags):
-mesh = gmshparser.parse_v2("meshes/square_tri_v2.msh", one=0)
+mesh = gmshparser.parse("meshes/square_tri_v2.msh", one=0)
 
 # Or pass a ParseOptions object:
 opts = gmshparser.ParseOptions()
 opts.one = 0
 opts.debug = True
-mesh = gmshparser.parse_v2("meshes/square_tri_v2.msh", options=opts)
+mesh = gmshparser.parse("meshes/square_tri_v2.msh", options=opts)
 
 print(mesh.V.shape)
 print(mesh.El.tri.EToV)

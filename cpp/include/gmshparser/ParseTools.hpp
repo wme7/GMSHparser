@@ -9,8 +9,15 @@
 //
 //%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
-#include "Globals.hpp"
-#include "Types.hpp"
+#include <iostream>
+#include <iterator>
+#include <map>
+#include <sstream>
+#include <string>
+#include <tuple>
+#include <vector>
+
+#include "MdimArray.hpp"
 
 //%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 // Get a sub-string from the main string-buffer using two unique delimiters:

@@ -1,11 +1,10 @@
 #ifndef GMSH_PARSE_V2_HPP
 #define GMSH_PARSE_V2_HPP
 
-#include "ElementTypes.hpp"
-#include "Globals.hpp"
-#include "GMSHparserTools.hpp"
+#include <algorithm>
+#include <fstream>
+
 #include "ParseHelpers.hpp"
-#include "Types.hpp"
 
 namespace gmshparser {
 

@@ -157,30 +157,21 @@ double detect_mesh_version(const std::string& mesh_file)
     return version;
 }
 
-PyMesh parse_v2_py(const std::string& mesh_file, const gmshparser::ParseOptions& opts = {})
-{
-    PyMesh out = mesh_to_python(gmshparser::parse_gmsh_v2(mesh_file, opts));
-    out.one = static_cast<int>(opts.one);
-    return out;
-}
-
-PyMesh parse_v4_py(const std::string& mesh_file, const gmshparser::ParseOptions& opts = {})
-{
-    PyMesh out = mesh_to_python(gmshparser::parse_gmsh_v4(mesh_file, opts));
-    out.one = static_cast<int>(opts.one);
-    return out;
-}
-
 PyMesh parse_py(const std::string& mesh_file, const gmshparser::ParseOptions& opts = {})
 {
     const double version = detect_mesh_version(mesh_file);
+    gmshparser::GmshMesh mesh;
     if (version == 2.2) {
-        return parse_v2_py(mesh_file, opts);
+        mesh = gmshparser::parse_gmsh_v2(mesh_file, opts);
+    } else if (version == 4.1) {
+        mesh = gmshparser::parse_gmsh_v4(mesh_file, opts);
+    } else {
+        throw std::runtime_error("Unsupported mesh format version: " + std::to_string(version));
     }
-    if (version == 4.1) {
-        return parse_v4_py(mesh_file, opts);
-    }
-    throw std::runtime_error("Unsupported mesh format version: " + std::to_string(version));
+
+    PyMesh out = mesh_to_python(mesh);
+    out.one = static_cast<int>(opts.one);
+    return out;
 }
 
 void bind_element_block(py::module& m, const char* name)
@@ -239,21 +230,9 @@ PYBIND11_MODULE(_gmshparser, m)
         .def_readonly("one", &PyMesh::one);
 
     m.def(
-        "parse_v2",
-        &parse_v2_py,
-        py::arg("path"),
-        py::arg("options") = gmshparser::ParseOptions{},
-        "Parse a Gmsh v2.2 mesh (options.one=1 gives 0-based indices; one=0 preserves GMSH tags).");
-    m.def(
-        "parse_v4",
-        &parse_v4_py,
-        py::arg("path"),
-        py::arg("options") = gmshparser::ParseOptions{},
-        "Parse a Gmsh v4.1 mesh (options.one=1 gives 0-based indices; one=0 preserves GMSH tags).");
-    m.def(
         "parse",
         &parse_py,
         py::arg("path"),
         py::arg("options") = gmshparser::ParseOptions{},
-        "Parse a Gmsh mesh, auto-detecting v2.2 or v4.1.");
+        "Parse a Gmsh mesh, auto-detecting v2.2 or v4.1 (options.one=1 gives 0-based indices; one=0 preserves GMSH tags).");
 }
