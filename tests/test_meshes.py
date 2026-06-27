@@ -9,13 +9,22 @@ import pytest
 from conftest import MESH_DIR, REFERENCE_DIR, mesh_stems, reference_mesh_paths
 from matlab_reference import compare_mesh_to_reference, load_reference
 
-# v4.1 can represent some extruded quad layers with a different face split than v2.2.
-V2_V4_QUAD_COUNT_MISMATCH_STEMS = frozenset({
-    "square_extruded_mixed",
-    "sector_extruded_mixed_p1",
-    "sector_extruded_mixed_p2",
-    "sector_extruded_mixed_p3",
+# Known v2.2 vs v4.1 element-count differences (same geometry, different export):
+# - stems: v4 -save-all emits extra point/line elements on partitioned-entity faces.
+# - quad: v4 can split extruded quad layers differently than v2.
+V2_V4_ELEMENT_COUNT_MISMATCH_STEMS = frozenset({
+    "simple_box",
+    "simple_rectangle",
 })
+
+V2_V4_GEOMETRY_COUNT_MISMATCH_STEMS: dict[str, frozenset[str]] = {
+    "quad": frozenset({
+        "square_extruded_mixed",
+        "sector_extruded_mixed_p1",
+        "sector_extruded_mixed_p2",
+        "sector_extruded_mixed_p3",
+    }),
+}
 
 MESH_PATHS = sorted(MESH_DIR.glob("*.msh"))
 
@@ -83,10 +92,11 @@ def test_v2_v4_geometry_consistency(stem: str, mesh_dir: Path) -> None:
     assert mesh_v2.info.phys_DIM == mesh_v4.info.phys_DIM
     assert mesh_v2.info.element_order == mesh_v4.info.element_order
 
-    for name in gmshparser.GEOMETRY_BLOCKS:
-        if name == "quad" and stem in V2_V4_QUAD_COUNT_MISMATCH_STEMS:
-            continue
-        assert getattr(mesh_v2.El, name).num_elements == getattr(mesh_v4.El, name).num_elements
+    if stem not in V2_V4_ELEMENT_COUNT_MISMATCH_STEMS:
+        for name in gmshparser.GEOMETRY_BLOCKS:
+            if stem in V2_V4_GEOMETRY_COUNT_MISMATCH_STEMS.get(name, frozenset()):
+                continue
+            assert getattr(mesh_v2.El, name).num_elements == getattr(mesh_v4.El, name).num_elements
 
     assert mesh_v2.physical_names == mesh_v4.physical_names
 
