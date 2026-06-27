@@ -33,22 +33,22 @@ function [V,VE,SE,LE,PE,mapPhysNames,info] = GMSHparserV4(filename)
 % Tetrahedron:                                          |        `\
 %                                                       0----------1 --> u
 %                   v
-%                  ,
-%                 /                    Based on the GMSH guide 4.9.4
-%               2                      This are lower-order elements 
-%             ,/|`\                    identified as:
-%           ,/  |  `\                      E-1 : 2-node Line 
-%         ,/    '.   `\                    E-2 : 3-node Triangle
-%       ,/       |     `\                  E-3 : 4-node quadrilateral
-%     ,/         |       `\                E-4 : 4-node tetrahedron
-%    0-----------'.--------1 --> u         E-5 : 8-node hexahedron
-%     `\.         |      ,/                E-6 : 6-node prism (wedge)
-%        `\.      |    ,/                  E-15: 1-node point
-%           `\.   '. ,/                Other elements can be added to 
-%              `\. |/                  this parser by modifying the 
-%                 `3                   Read Elements stage.
-%                    `\.
-%                       ` w            Happy coding ! M.D. 02/2022.
+%                 ,
+%                /                Based on the GMSH guide 4.9.4
+%              2                  This are lower-order & high-order 
+%            ,/|`\                elements identified as families:
+%          ,/  |  `\                 E-1, E-8, E-26 : 2, 3, 4-node Line 
+%        ,/    '.   `\               E-2, E-9, E-21 : 3, 6, 10-node Triangle
+%      ,/       |     `\             E-3, E-10, E-36: 4, 9, 16-node Quadrilateral
+%    ,/         |       `\           E-4, E-11, E-29: 4, 10, 20-node Tetrahedron
+%   0-----------'.--------1 --> u    E-5, E-12, E-92: 8, 27, 64-node Hexahedron
+%    `\.         |      ,/           E-6, E-13: E-90: 6, 18, 40-node Prism (wedge)
+%       `\.      |    ,/             E-15 : 1-node point
+%          `\.   '. ,/            Other elements can be added to 
+%             `\. |/              this parser by modifying the 
+%                `3               Read Elements stage.
+%                  `\.
+%                     ` w        Happy coding ! M.D. 02/2022.
 %
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 %% Read all sections
@@ -74,7 +74,11 @@ if isempty(Nodes),         error('Error - Nodes are missing!'); end
 if isempty(Elements),      error('Error - No elements found!'); end
 
 % Is it a single or partitioned domain?
-if isempty(PartEntities), single_domain=1; else, single_domain=0; end
+if isempty(PartEntities)
+    info.single_domain=true; 
+else
+    info.single_domain=false;
+end
 
 % Split data lines into cells (Only in Matlab!)
 cells_MF   = splitlines(MeshFormat);
@@ -82,12 +86,12 @@ cells_PN   = splitlines(PhysicalNames);
 cells_Ent  = splitlines(Entities);
 cells_N    = splitlines(Nodes);
 cells_E    = splitlines(Elements);
-if not(single_domain)
+if not(info.single_domain)
     cells_PEnt = splitlines(PartEntities);
 end
 
 % Get solver convention of names
-[FEtype,BEtype] = load_convention();
+[FEtype,BEtype] = load_convention(); %#ok<ASGLU>
 
 %% Identify critical data within each section:
 
@@ -119,7 +123,7 @@ end
 mapPhysNames = containers.Map([phys.tag],{phys.name});
 info.Dim = max([phys.dim]);
 
-if single_domain
+if info.single_domain
     %***********************%
     % 3. Read Entities
     %***********************%
@@ -250,24 +254,39 @@ numElements     = line_data(2);
 
 % Allocate space for Elements data
 elem = struct('EToV',[],'phys_tag',[],'geom_tag',[],'part_tag',[],'Etype',[]);
-PE = elem;
-LE = elem;
+PE = struct('pnt',elem);
+LE = struct('lin',elem);
 SE = struct('tri',elem,'quad',elem);
 VE = struct('tet',elem,'hex',elem,'prism',elem);
 
 % Element counters
-numE1 = 0; % Lines Element counter
-numE2 = 0; % Triangle Element counter
-numE3 = 0; % Quadrilateral Element counter
-numE4 = 0; % Tetrahedron Element counter
-numE5 = 0; % Hexahedron Element counter
-numE6 = 0; % Prism Element counter
+numE1 = 0; % 1st-order Lines Element counter
+numE2 = 0; % 1st-order Triangle Element counter
+numE3 = 0; % 1st-order Quadrilateral Element counter
+numE4 = 0; % 1st-order Tetrahedron Element counter
+numE5 = 0; % 1st-order Hexahedron Element counter
+numE6 = 0; % 1st-order Prism Element counter
+
+numE8 = 0; % 2nd-order Lines Element counter
+numE9 = 0; % 2nd-order Triangle Element counter
+numE10 = 0; % 2nd-order Quadrilateral Element counter
+numE11 = 0; % 2nd-order Tetrahedron Element counter
+numE12 = 0; % 2nd-order Hexahedron Element counter
+numE13 = 0; % 2nd-order Prism Element counter
+
+numE26 = 0; % 3rd-order Lines Element counter
+numE21 = 0; % 3rd-order Triangle Element counter
+numE36 = 0; % 3rd-order Quadrilateral Element counter
+numE29 = 0; % 3rd-order Tetrahedron Element counter
+numE92 = 0; % 3rd-order Hexahedron Element counter
+numE90 = 0; % 3rd-order Prism Element counter
+
 numE15= 0; % point Element counter
 
 % Read elements blocks
 for ent = 1:numEntityBlocks
     l = l+1; % update line counter
-    line_data = sscanf(cells_E{l},'%d %d %d %d');
+    line_data = sscanf(cells_E{l},'%d');
     %entityDim = line_data(1); % 0:point, 1:curve, 2:surface, 3:volume
     entityTag = line_data(2); % this is: Entity.ID | Entity.child_ID
     elementType = line_data(3); % 1:line, 2:tri, 3:quad, 4:tet, 5:hex, 6:prism, 15:point
@@ -276,104 +295,227 @@ for ent = 1:numEntityBlocks
     % Read Elements in block
     for i=1:numElementsInBlock
         l = l+1; % update line counter
-        line_data = sscanf(cells_E{l},'%d %d %d %d');
+        line_data = sscanf(cells_E{l},'%d');
         %elementID = line_data(1); % we use a local numbering instead
-        switch elementType % <-- Should use entittyDim, but we only search 4 type of elements
-            case 1 % Line elements
-                numE1 = numE1 + 1; % update element counter
-                LE.Etype(numE1,1) = elementType;
-                LE.EToV(numE1,:) = line_data(2:3);
-                LE.phys_tag(numE1,1) = curve2Phys(entityTag);
-                if not(single_domain)
-                    LE.geom_tag(numE1,1) = curve2Geom(entityTag);
-                    LE.part_tag(numE1,1) = curve2Part(entityTag);
+        switch elementType
+            case 1 % 1st-order Line elements
+                [LE, numE1] = assign_element_type(LE, 'lin', numE1, elementType, line_data(2:end), entityTag, curve2Phys);
+                if not(info.single_domain)
+                    LE.lin.geom_tag(numE1,1) = curve2Geom(entityTag);
+                    LE.lin.part_tag(numE1,1) = curve2Part(entityTag);
                 else
-                    LE.geom_tag(numE1,1) = entityTag;
+                    LE.lin.geom_tag(numE1,1) = entityTag;
                 end
-            case 2 % triangle elements
-                numE2 = numE2 + 1; % update element counter
-                SE.tri.Etype(numE2,1) = elementType;
-                SE.tri.EToV(numE2,:) = line_data(2:4);
-                SE.tri.phys_tag(numE2,1) = surf2Phys(entityTag);
-                if not(single_domain)
+            case 2 % 1st-order Triangle elements
+                [SE, numE2] = assign_element_type(SE, 'tri', numE2, elementType, line_data(2:end), entityTag, surf2Phys);
+                if not(info.single_domain)
                     SE.tri.geom_tag(numE2,1) = surf2Geom(entityTag);
                     SE.tri.part_tag(numE2,1) = surf2Part(entityTag);
                 else
                     SE.tri.geom_tag(numE2,1) = entityTag;
                 end
-            case 3 % quadrilateral elements
-                numE3 = numE3 + 1; % update element counter
-                SE.quad.Etype(numE3,1) = elementType;
-                SE.quad.EToV(numE3,:) = line_data(2:5);
-                SE.quad.phys_tag(numE3,1) = surf2Phys(entityTag);
-                if not(single_domain)
+            case 3 % 1st-order Quadrilateral elements
+                [SE, numE3] = assign_element_type(SE, 'quad', numE3, elementType, line_data(2:end), entityTag, surf2Phys);
+                if not(info.single_domain)
                     SE.quad.geom_tag(numE3,1) = surf2Geom(entityTag);
                     SE.quad.part_tag(numE3,1) = surf2Part(entityTag);
                 else
                     SE.quad.geom_tag(numE3,1) = entityTag;
                 end
-            case 4 % tetrahedron elements
-                numE4 = numE4 + 1; % update element counter
-                VE.tet.Etype(numE4,1) = elementType;
-                VE.tet.EToV(numE4,:) = line_data(2:5);
-                VE.tet.phys_tag(numE4,1) = volm2Phys(entityTag);
-                if not(single_domain)
+            case 4 % 1st-order Tetrahedron elements
+                [VE, numE4] = assign_element_type(VE, 'tet', numE4, elementType, line_data(2:end), entityTag, volm2Phys);
+                if not(info.single_domain)
                     VE.tet.geom_tag(numE4,1) = volm2Geom(entityTag);
                     VE.tet.part_tag(numE4,1) = volm2Part(entityTag);
                 else 
                     VE.tet.geom_tag(numE4,1) = entityTag;
                 end
-            case 5 % hexahedron elements
-                numE5 = numE5 + 1; % update element counter
-                VE.hex.Etype(numE5,1) = elementType;
-                VE.hex.EToV(numE5,:) = line_data(2:9);
-                VE.hex.phys_tag(numE5,1) = volm2Phys(entityTag);
-                if not(single_domain)
+            case 5 % 1st-order Hexahedron elements
+                [VE, numE5] = assign_element_type(VE, 'hex', numE5, elementType, line_data(2:end), entityTag, volm2Phys);
+                if not(info.single_domain)
                     VE.hex.geom_tag(numE5,1) = volm2Geom(entityTag);
                     VE.hex.part_tag(numE5,1) = volm2Part(entityTag);
                 else
                     VE.hex.geom_tag(numE5,1) = entityTag;
                 end
-            case 6 % prism (wedge) elements
-                numE6 = numE6 + 1; % update element counter
-                VE.prism.Etype(numE6,1) = elementType;
-                VE.prism.EToV(numE6,:) = line_data(2:7);
-                VE.prism.phys_tag(numE6,1) = volm2Phys(entityTag);
-                if not(single_domain)
+            case 6 % 1st-order Prism (wedge) elements
+                [VE, numE6] = assign_element_type(VE, 'prism', numE6, elementType, line_data(2:end), entityTag, volm2Phys);
+                if not(info.single_domain)
                     VE.prism.geom_tag(numE6,1) = volm2Geom(entityTag);
                     VE.prism.part_tag(numE6,1) = volm2Part(entityTag);
                 else
                     VE.prism.geom_tag(numE6,1) = entityTag;
                 end
-            case 15 % Point elements
-                numE15 = numE15 + 1; % update element counter
-                PE.Etype(numE15,1) = elementType;
-                PE.EToV(numE15,:) = line_data(2);
-                PE.phys_tag(numE15,1) = point2Phys(entityTag);
-                if not(single_domain)
-                    PE.geom_tag(numE15,1) = point2Geom(entityTag);
-                    PE.part_tag(numE15,1) = point2Part(entityTag);
+            case 8 % 2nd-order Line elements
+                [LE, numE8] = assign_element_type(LE, 'lin', numE8, elementType, line_data(2:end), entityTag, curve2Phys);
+                if not(info.single_domain)
+                    LE.lin.geom_tag(numE8,1) = curve2Geom(entityTag);
+                    LE.lin.part_tag(numE8,1) = curve2Part(entityTag);
                 else
-                    PE.geom_tag(numE15,1) = entityTag;
+                    LE.lin.geom_tag(numE8,1) = entityTag;
+                end
+            case 9 % 2nd-order Triangle elements
+                [SE, numE9] = assign_element_type(SE, 'tri', numE9, elementType, line_data(2:end), entityTag, surf2Phys);
+                if not(info.single_domain)
+                    SE.tri.geom_tag(numE9,1) = surf2Geom(entityTag);
+                    SE.tri.part_tag(numE9,1) = surf2Part(entityTag);
+                else
+                    SE.tri.geom_tag(numE9,1) = entityTag;
+                end
+            case 10 % 2nd-order Quadrilateral elements
+                [SE, numE10] = assign_element_type(SE, 'quad', numE10, elementType, line_data(2:end), entityTag, surf2Phys);
+                if not(info.single_domain)
+                    SE.quad.geom_tag(numE10,1) = surf2Geom(entityTag);
+                    SE.quad.part_tag(numE10,1) = surf2Part(entityTag);
+                else
+                    SE.quad.geom_tag(numE10,1) = entityTag;
+                end
+            case 11 % 2nd-order Tetrahedron elements
+                [VE, numE11] = assign_element_type(VE, 'tet', numE11, elementType, line_data(2:end), entityTag, volm2Phys);
+                if not(info.single_domain)
+                    VE.tet.geom_tag(numE11,1) = volm2Geom(entityTag);
+                    VE.tet.part_tag(numE11,1) = volm2Part(entityTag);
+                else
+                    VE.tet.geom_tag(numE11,1) = entityTag;
+                end
+            case 12 % 2nd-order Hexahedron elements
+                [VE, numE12] = assign_element_type(VE, 'hex', numE12, elementType, line_data(2:end), entityTag, volm2Phys);
+                if not(info.single_domain)
+                    VE.hex.geom_tag(numE12,1) = volm2Geom(entityTag);
+                    VE.hex.part_tag(numE12,1) = volm2Part(entityTag);
+                else
+                    VE.hex.geom_tag(numE12,1) = entityTag;
+                end
+            case 13 % 2nd-order Prism (wedge) elements
+                [VE, numE13] = assign_element_type(VE, 'prism', numE13, elementType, line_data(2:end), entityTag, volm2Phys);
+                if not(info.single_domain)
+                    VE.prism.geom_tag(numE13,1) = volm2Geom(entityTag);
+                    VE.prism.part_tag(numE13,1) = volm2Part(entityTag);
+                else
+                    VE.prism.geom_tag(numE13,1) = entityTag;
+                end
+            case 26 % 3rd-order Line elements
+                [LE, numE26] = assign_element_type(LE, 'lin', numE26, elementType, line_data(2:end), entityTag, curve2Phys);
+                if not(info.single_domain)
+                    LE.lin.geom_tag(numE26,1) = curve2Geom(entityTag);
+                    LE.lin.part_tag(numE26,1) = curve2Part(entityTag);
+                else
+                    LE.lin.geom_tag(numE26,1) = entityTag;
+                end
+            case 21 % 3rd-order Triangle elements
+                [SE, numE21] = assign_element_type(SE, 'tri', numE21, elementType, line_data(2:end), entityTag, surf2Phys);
+                if not(info.single_domain)
+                    SE.tri.geom_tag(numE21,1) = surf2Geom(entityTag);
+                    SE.tri.part_tag(numE21,1) = surf2Part(entityTag);
+                else
+                    SE.tri.geom_tag(numE21,1) = entityTag;
+                end
+            case 36 % 3rd-order Quadrilateral elements
+                [SE, numE36] = assign_element_type(SE, 'quad', numE36, elementType, line_data(2:end), entityTag, surf2Phys);
+                if not(info.single_domain)
+                    SE.quad.geom_tag(numE36,1) = surf2Geom(entityTag);
+                    SE.quad.part_tag(numE36,1) = surf2Part(entityTag);
+                else
+                    SE.quad.geom_tag(numE36,1) = entityTag;
+                end
+            case 29 % 3rd-order Tetrahedron elements
+                [VE, numE29] = assign_element_type(VE, 'tet', numE29, elementType, line_data(2:end), entityTag, volm2Phys);
+                if not(info.single_domain)
+                    VE.tet.geom_tag(numE29,1) = volm2Geom(entityTag);
+                    VE.tet.part_tag(numE29,1) = volm2Part(entityTag);
+                else
+                    VE.tet.geom_tag(numE29,1) = entityTag;
+                end
+            case 92 % 3rd-order Hexahedron elements
+                [VE, numE92] = assign_element_type(VE, 'hex', numE92, elementType, line_data(2:end), entityTag, volm2Phys);
+                if not(info.single_domain)
+                    VE.hex.geom_tag(numE92,1) = volm2Geom(entityTag);
+                    VE.hex.part_tag(numE92,1) = volm2Part(entityTag);
+                else
+                    VE.hex.geom_tag(numE92,1) = entityTag;
+                end
+            case 90 % 3rd-order Prism (wedge) elements
+                [VE, numE90] = assign_element_type(VE, 'prism', numE90, elementType, line_data(2:end), entityTag, volm2Phys);
+                if not(info.single_domain)
+                    VE.prism.geom_tag(numE90,1) = volm2Geom(entityTag);
+                    VE.prism.part_tag(numE90,1) = volm2Part(entityTag);
+                else
+                    VE.prism.geom_tag(numE90,1) = entityTag;
+                end
+            case 15 % Point elements
+                [PE, numE15] = assign_element_type(PE, 'pnt', numE15, elementType, line_data(2:end), entityTag, point2Phys);
+                if not(info.single_domain)
+                    PE.pnt.geom_tag(numE15,1) = point2Geom(entityTag);
+                    PE.pnt.part_tag(numE15,1) = point2Part(entityTag);
+                else
+                    PE.pnt.geom_tag(numE15,1) = entityTag;
                 end
             otherwise, error('ERROR: element type not in list');
         end
     end
 end
 %
-fprintf('Total point-elements found = %d\n',numE15);
-fprintf('Total line-elements found = %d\n',numE1);
-fprintf('Total triangle-elements found = %d\n',numE2);
-fprintf('Total quadrilateral-elements found = %d\n',numE3);
-fprintf('Total tetrahedron-elements found = %d\n',numE4);
-fprintf('Total hexahedron-elements found = %d\n',numE5);
-fprintf('Total prism-elements found = %d\n',numE6);
-% Sanity check
-if numElements ~= (numE15+numE1+numE2+numE3+numE4+numE5+numE6)
-    error('Total number of elements missmatch!'); 
+% Total number of elements in each order
+numElements1stOrder = numE1 + numE2 + numE3 + numE4 + numE5 + numE6;
+numElements2ndOrder = numE8 + numE9 + numE10 + numE11 + numE12 + numE13;
+numElements3rdOrder = numE26 + numE21 + numE36 + numE29 + numE90 + numE92;
+% Gmsh treats element order as a global setting. Mesh is either 1st, 2nd or 3rd order
+if numElements1stOrder ~= 0
+    info.element_order = 1;
+    fprintf('Total point-elements found = %d\n',numE15);
+    fprintf('Total line-elements found = %d\n',numE1);
+    fprintf('Total triangle-elements found = %d\n',numE2);
+    fprintf('Total quadrilateral-elements found = %d\n',numE3);
+    fprintf('Total tetrahedron-elements found = %d\n',numE4);
+    fprintf('Total hexahedron-elements found = %d\n',numE5);
+    fprintf('Total prism-elements found = %d\n',numE6);
+    % Sanity check
+    if numElements ~= numElements1stOrder + numE15
+        error('Total number of elements missmatch!'); 
+    end
+elseif numElements2ndOrder ~= 0
+    info.element_order = 2;
+    fprintf('Total point-elements found = %d\n',numE15);
+    fprintf('Total line-elements found = %d\n',numE8);
+    fprintf('Total triangle-elements found = %d\n',numE9);
+    fprintf('Total quadrilateral-elements found = %d\n',numE10);
+    fprintf('Total tetrahedron-elements found = %d\n',numE11);
+    fprintf('Total hexahedron-elements found = %d\n',numE12);
+    fprintf('Total prism-elements found = %d\n',numE13);
+    % Sanity check
+    if numElements ~= numElements2ndOrder + numE15
+        error('Total number of elements missmatch!'); 
+    end
+elseif numElements3rdOrder ~= 0
+    info.element_order = 3;
+    fprintf('Total point-elements found = %d\n',numE15);
+    fprintf('Total line-elements found = %d\n',numE26);
+    fprintf('Total triangle-elements found = %d\n',numE21);
+    fprintf('Total quadrilateral-elements found = %d\n',numE36);
+    fprintf('Total tetrahedron-elements found = %d\n',numE29);
+    fprintf('Total hexahedron-elements found = %d\n',numE92);
+    fprintf('Total prism-elements found = %d\n',numE90);
+    % Sanity check
+    if numElements ~= numElements3rdOrder + numE15
+        error('Total number of elements missmatch!'); 
+    end
+else 
+    info.element_order = 0;
+    fprintf('Total point-elements found = %d\n',numE15);
+    % Sanity check
+    if numElements ~= numE15
+        error('Total number of elements missmatch!'); 
+    end
 end
 %
 end % GMSHv4 read function
+
+function [E, idx] = assign_element_type(E, kind, idx, elementType, connectivity, entityTag, physMap)
+    idx = idx + 1; % update element counter
+    E.(kind).Etype(idx,1) = elementType;
+    E.(kind).EToV(idx,:) = connectivity;
+    E.(kind).phys_tag(idx,1) = physMap(entityTag);
+end
 
 % Get single entity information:
 function entity = get_entity(str_line,type)
@@ -494,7 +636,7 @@ function entity = get_partitionedEntity(str_line,type)
                     'Part_ID',partitionTags,'Phys_ID',physicalTag);
 end
 
-% Get single partitioned entity information:
+% Get nodes information:
 function V = get_nodes(cells_N,numNodeBlocks,numNodes)
 
     % allocate space for nodal data
